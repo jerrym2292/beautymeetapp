@@ -1,0 +1,9 @@
+node_modules
+.next
+# Keep environment variables out of version control
+.env
+
+# local/dev db + sqlite artifacts
+*.db
+
+/generated/prisma
