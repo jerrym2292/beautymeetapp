@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requirePin } from "../_auth";
+import { requireAdmin } from "../_auth";
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const pin = url.searchParams.get("pin");
-  const auth = requirePin(pin);
+export const runtime = "nodejs";
+
+export async function GET() {
+  const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: 401 });
   }

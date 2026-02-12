@@ -1,7 +1,8 @@
-export function requirePin(pin: string | null | undefined) {
-  const expected = process.env.ADMIN_PIN;
-  if (!expected) return { ok: false, error: "ADMIN_PIN not configured" };
-  if (!pin) return { ok: false, error: "PIN required" };
-  if (pin !== expected) return { ok: false, error: "Invalid PIN" };
-  return { ok: true as const };
+import { getCurrentUser } from "@/lib/auth";
+
+export async function requireAdmin() {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false as const, error: "Not logged in" };
+  if (user.role !== "ADMIN") return { ok: false as const, error: "Admin only" };
+  return { ok: true as const, user };
 }

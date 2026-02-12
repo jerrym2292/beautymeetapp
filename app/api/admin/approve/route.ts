@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requirePin } from "../_auth";
+import { requireAdmin } from "../_auth";
+
+export const runtime = "nodejs";
 
 const Body = z.object({
-  pin: z.string().min(1),
   appId: z.string().min(1),
   displayName: z.string().min(2).max(80),
   baseZip: z.string().min(5).max(10),
@@ -17,11 +18,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { pin, appId, displayName, baseZip } = parsed.data;
-  const auth = requirePin(pin);
+  const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: 401 });
   }
+
+  const { appId, displayName, baseZip } = parsed.data;
 
   const app = await prisma.providerApplication.findUnique({
     where: { id: appId },
