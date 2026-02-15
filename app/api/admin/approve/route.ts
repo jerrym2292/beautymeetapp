@@ -49,6 +49,13 @@ export async function POST(req: Request) {
         accessToken: crypto.randomUUID(),
         displayName,
         mode: "BOTH",
+
+        // carry license info from application; must still be verified before public listing
+        licenseType: app.licenseType,
+        licenseState: app.licenseState,
+        licenseNumber: app.licenseNumber,
+        licenseVerified: false,
+
         baseAddress1: "TBD",
         baseAddress2: null,
         baseCity: "TBD",

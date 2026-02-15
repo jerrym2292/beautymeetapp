@@ -1,0 +1,64 @@
+// ---- Affiliate / referral tracking ----
+
+enum ReferralType {
+  CUSTOMER
+  PROVIDER
+}
+
+model Affiliate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  code   String @unique // public referral code
+  name   String?
+  email  String?
+  active Boolean @default(true)
+
+  referrals Referral[]
+  payouts   AffiliatePayout[]
+}
+
+model Referral {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  type ReferralType
+
+  // One of these will be set depending on type
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id])
+
+  // attribution window + earning window
+  attributedAt DateTime @default(now())
+  earnUntil    DateTime? // for customer referrals (60 days)
+}
+
+model AffiliatePayout {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  // source
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id])
+
+  // money
+  amountCents Int
+  currency    String @default("USD")
+  reason      String // BOOKING_PLATFORM_FEE_SHARE | PROVIDER_SUBSCRIPTION_SHARE
+
+  // bookkeeping
+  externalRef String? // e.g., Stripe invoice/payment id when we wire it
+}

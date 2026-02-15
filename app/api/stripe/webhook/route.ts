@@ -25,13 +25,42 @@ export async function POST(req: Request) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as any;
-      const bookingId = session?.metadata?.bookingId;
-      const paymentIntentId = session?.payment_intent as string | undefined;
-      if (bookingId && paymentIntentId) {
-        await prisma.payment.updateMany({
-          where: { booking: { id: bookingId } },
-          data: { status: "AUTHORIZED", paymentIntentId },
-        });
+      const bookingId = session?.metadata?.bookingId as string | undefined;
+      const paymentId = session?.metadata?.paymentId as string | undefined;
+
+      // Two modes:
+      // - mode=setup: we store a card on file (no charge yet)
+      // - mode=payment (legacy/if used): we record the PI
+      const mode = session?.mode as string | undefined;
+
+      if (mode === "setup") {
+        const setupIntentId = session?.setup_intent as string | undefined;
+        const customerId = session?.customer as string | undefined;
+
+        if (setupIntentId && (paymentId || bookingId)) {
+          const si = await stripe.setupIntents.retrieve(setupIntentId);
+          const paymentMethodId = (si.payment_method as string) || null;
+
+          await prisma.payment.updateMany({
+            where: paymentId
+              ? { id: paymentId }
+              : { booking: { id: bookingId! } },
+            data: {
+              status: "CARD_ON_FILE",
+              stripeCustomerId: customerId || null,
+              stripePaymentMethodId: paymentMethodId,
+              checkoutSessionId: session.id,
+            },
+          });
+        }
+      } else {
+        const paymentIntentId = session?.payment_intent as string | undefined;
+        if (bookingId && paymentIntentId) {
+          await prisma.payment.updateMany({
+            where: { booking: { id: bookingId } },
+            data: { status: "AUTHORIZED", paymentIntentId },
+          });
+        }
       }
       break;
     }

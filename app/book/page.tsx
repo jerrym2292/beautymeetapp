@@ -22,6 +22,7 @@ export default function BookPage() {
   const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS">("ALL");
 
   const [results, setResults] = useState<Provider[]>([]);
+  const [recommendedId, setRecommendedId] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -45,12 +46,13 @@ export default function BookPage() {
     }
 
     setResults(j.providers || []);
+    setRecommendedId(j.recommendedProviderId || null);
     setStatus("done");
   }
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Book (USA)</h1>
@@ -100,32 +102,64 @@ export default function BookPage() {
           </div>
 
           <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-            {results.map((p) => (
-              <div key={p.id} style={card}>
-                <div style={{ fontWeight: 800, fontSize: 17 }}>{p.displayName}</div>
-                <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                  {p.distanceMiles} miles • {p.mode} • {p.baseCity}, {p.baseState} {p.baseZip}
-                </div>
+            {(() => {
+              const recommended = recommendedId ? results.find((p) => p.id === recommendedId) : null;
+              const rest = recommended ? results.filter((p) => p.id !== recommended.id) : results;
 
-                <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-                  <a
-                    href={`/p/${p.id}`}
-                    style={{ ...btn, display: "block", textAlign: "center", textDecoration: "none" }}
-                  >
-                    Request booking
-                  </a>
-                </div>
+              return (
+                <>
+                  {recommended ? (
+                    <div style={{ ...card, border: "1px solid rgba(212,175,55,0.35)" }}>
+                      <div style={{ fontSize: 12, opacity: 0.85, fontWeight: 900, letterSpacing: 0.4 }}>
+                        RECOMMENDED FOR YOU
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: 17, marginTop: 6 }}>{recommended.displayName}</div>
+                      <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                        {recommended.distanceMiles} miles • {recommended.mode} • {recommended.baseCity}, {recommended.baseState} {recommended.baseZip}
+                      </div>
+                      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                        <a
+                          href={`/p/${recommended.id}`}
+                          style={{ ...btn, display: "block", textAlign: "center", textDecoration: "none" }}
+                        >
+                          Request booking (recommended)
+                        </a>
+                        <div style={{ fontSize: 12, opacity: 0.75 }}>
+                          No preference? We picked the best match based on distance and overall fit — and we rotate in newer techs so they get a fair shot.
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
 
-                <div style={{ marginTop: 10, fontWeight: 700, opacity: 0.9 }}>Services</div>
-                <ul style={{ margin: "8px 0 0", paddingLeft: 18, opacity: 0.9 }}>
-                  {p.services.slice(0, 8).map((s) => (
-                    <li key={s.id} style={{ marginBottom: 6 }}>
-                      {s.name} — ${(s.priceCents / 100).toFixed(2)} ({s.durationMin}m)
-                    </li>
+                  {rest.map((p) => (
+                    <div key={p.id} style={card}>
+                      <div style={{ fontWeight: 800, fontSize: 17 }}>{p.displayName}</div>
+                      <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                        {p.distanceMiles} miles • {p.mode} • {p.baseCity}, {p.baseState} {p.baseZip}
+                      </div>
+
+                      <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                        <a
+                          href={`/p/${p.id}`}
+                          style={{ ...btn, display: "block", textAlign: "center", textDecoration: "none" }}
+                        >
+                          Request booking
+                        </a>
+                      </div>
+
+                      <div style={{ marginTop: 10, fontWeight: 700, opacity: 0.9 }}>Services</div>
+                      <ul style={{ margin: "8px 0 0", paddingLeft: 18, opacity: 0.9 }}>
+                        {p.services.slice(0, 8).map((s) => (
+                          <li key={s.id} style={{ marginBottom: 6 }}>
+                            {s.name} — ${(s.priceCents / 100).toFixed(2)} ({s.durationMin}m)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
-              </div>
-            ))}
+                </>
+              );
+            })()}
 
             {results.length === 0 ? (
               <div style={{ opacity: 0.85, marginTop: 10 }}>
@@ -160,8 +194,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

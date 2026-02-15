@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Login</h1>
@@ -48,7 +48,7 @@ export default function LoginPage() {
         <button style={btn} disabled={status === "loading"}>
           {status === "loading" ? "Signing in…" : "Sign in"}
         </button>
-        <Link href="/forgot-password" style={{ color: "#c7d2fe", fontSize: 13 }}>
+        <Link href="/forgot-password" style={{ color: "#D4AF37", fontSize: 13 }}>
           Forgot password?
         </Link>
       </form>
@@ -69,8 +69,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

@@ -6,8 +6,13 @@ export async function GET(
   { params }: { params: Promise<{ providerId: string }> }
 ) {
   const { providerId } = await params;
-  const provider = await prisma.provider.findUnique({
-    where: { id: providerId },
+  const provider = await prisma.provider.findFirst({
+    where: {
+      id: providerId,
+      stripeChargesEnabled: true,
+      stripePayoutsEnabled: true,
+      licenseVerified: true,
+    },
     select: {
       id: true,
       displayName: true,

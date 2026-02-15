@@ -20,13 +20,18 @@ export async function POST(
 
   await prisma.booking.update({ where: { id: booking.id }, data: { status: "DECLINED" } });
 
-  if (booking.payment?.paymentIntentId) {
+  // Under the new flow, we should not have charged yet while PENDING.
+  // If we somehow have a captured charge, refund it.
+  if (booking.payment?.paymentIntentId && booking.payment.status === "CAPTURED") {
     const stripe = getStripe();
-    await stripe.paymentIntents.cancel(booking.payment.paymentIntentId).catch(() => null);
-    await prisma.payment.update({ where: { id: booking.payment.id }, data: { status: "VOIDED" } });
+    const refund = await stripe.refunds.create({ payment_intent: booking.payment.paymentIntentId });
+    await prisma.payment.update({
+      where: { id: booking.payment.id },
+      data: { status: "REFUNDED", latestRefundId: refund.id },
+    });
   }
 
-  // TODO: SMS to customer
+  // TODO: email notification to customer
 
   return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
 }

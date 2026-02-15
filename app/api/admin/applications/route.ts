@@ -20,6 +20,9 @@ export async function GET() {
       phone: true,
       email: true,
       status: true,
+      licenseType: true,
+      licenseState: true,
+      licenseNumber: true,
     },
   });
 

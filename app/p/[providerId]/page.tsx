@@ -84,7 +84,7 @@ export default function ProviderBookingPage({
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>← Home</Link>
+      <Link href="/" style={{ color: "#D4AF37" }}>← Home</Link>
 
       {err ? (
         <div style={{ marginTop: 14, color: "#fecaca" }}>{err}</div>
@@ -136,9 +136,9 @@ export default function ProviderBookingPage({
 
               {selectedService ? (
                 <div style={{ opacity: 0.85, fontSize: 13, lineHeight: 1.35 }}>
-                  You’ll pay the <b>full amount</b> now (authorized/held) and it’s captured when the service is completed.
-                  Security deposit is <b>20%</b> of total. Platform fee is <b>5%</b> of service price.
-                  Travel fee is <b>$1/mile</b> (ZIP estimate).
+                  <b>Card required to hold your spot.</b> You won’t be charged unless the tech accepts.
+                  Once approved, we charge the full amount. If you don’t show, we keep a <b>20%</b> deposit.
+                  Platform fee is <b>5%</b> of service price. Travel fee is <b>$1/mile</b> (ZIP estimate).
                 </div>
               ) : null}
 
@@ -179,8 +179,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

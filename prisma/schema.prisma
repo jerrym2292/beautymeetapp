@@ -24,17 +24,25 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum LicenseType {
+  COSMETOLOGY
+  ESTHETICIAN
+  NAIL_TECHNICIAN
+}
+
 enum BookingStatus {
-  PENDING // requested + paid/authorized, awaiting tech approval
+  PENDING // requested, awaiting tech approval
   APPROVED
   DECLINED
   CANCELLED
+  EXPIRED
   NO_SHOW
   COMPLETED
 }
 
 enum PaymentStatus {
-  REQUIRES_PAYMENT
+  REQUIRES_PAYMENT // not used once card is saved
+  CARD_ON_FILE
   AUTHORIZED
   CAPTURED
   REFUNDED
@@ -49,6 +57,12 @@ model ProviderApplication {
   fullName String
   phone    String
   email    String?
+
+  // Licensing (required before public listing)
+  licenseType   LicenseType?
+  licenseState  String?
+  licenseNumber String?
+  licenseVerified Boolean @default(false)
 
   // Collected at application time. Hidden from public.
   address1 String?
@@ -67,6 +81,17 @@ model Provider {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Licensing (required before public listing)
+  licenseType   LicenseType?
+  licenseState  String?
+  licenseNumber String?
+  licenseVerified Boolean @default(false)
+
+  // Membership subscription (platform billing)
+  membershipStatus   String? // ACTIVE | PAST_DUE | CANCELED
+  membershipStripeCustomerId String?
+  membershipStripeSubscriptionId String?
 
   applicationId String              @unique
   application   ProviderApplication @relation(fields: [applicationId], references: [id])
@@ -184,8 +209,13 @@ model Payment {
   provider String @default("stripe")
 
   // Stripe refs
-  paymentIntentId String?
-  latestChargeId  String?
+  stripeCustomerId      String?
+  stripePaymentMethodId String?
+  checkoutSessionId     String?
+  paymentIntentId       String?
+  latestChargeId        String?
+  latestRefundId        String?
+  latestTransferId      String?
 
   booking Booking?
 }

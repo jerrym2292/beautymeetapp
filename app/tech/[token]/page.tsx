@@ -25,7 +25,7 @@ export default async function TechDashboard({
   if (!provider) {
     return (
       <main>
-        <Link href="/" style={{ color: "#c7d2fe" }}>
+        <Link href="/" style={{ color: "#D4AF37" }}>
           ← Home
         </Link>
         <h1 style={{ marginTop: 12 }}>Tech dashboard</h1>
@@ -36,7 +36,7 @@ export default async function TechDashboard({
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Tech dashboard</h1>
@@ -68,7 +68,7 @@ export default async function TechDashboard({
       <section style={card}>
         <div style={{ fontWeight: 800 }}>Public booking link</div>
         <div style={{ opacity: 0.85, marginTop: 6 }}>
-          <a style={{ color: "#c7d2fe" }} href={`/p/${provider.id}`}>
+          <a style={{ color: "#D4AF37" }} href={`/p/${provider.id}`}>
             /p/{provider.id}
           </a>
         </div>
@@ -180,7 +180,7 @@ export default async function TechDashboard({
                   <div>
                     <div style={{ fontSize: 12, opacity: 0.7 }}>Customer completion link:</div>
                     <div style={{ marginTop: 6 }}>
-                      <a style={{ color: "#c7d2fe", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
+                      <a style={{ color: "#D4AF37", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
                         /c/{(b as any).customerConfirmToken}
                       </a>
                     </div>
@@ -230,8 +230,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

@@ -102,41 +102,25 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
+  // We do NOT charge at request time. We only collect a card to hold the spot.
+  // Charge happens automatically only after the tech approves.
   const stripe = getStripe();
   const baseUrl = process.env.APP_BASE_URL || new URL(req.url).origin;
 
   const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer_creation: "if_required",
+    mode: "setup",
+    customer_creation: "always",
     success_url: `${baseUrl}/book/success?bookingId=${booking.id}&cancelToken=${customerCancelToken}`,
     cancel_url: `${baseUrl}/book/cancel?bookingId=${booking.id}`,
-    metadata: { bookingId: booking.id },
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: totalCents,
-          product_data: {
-            name: `${provider.displayName} — ${service.name}`,
-            description: isMobile ? `Mobile (${estimatedMiles} mi est.)` : `In-studio`,
-          },
-        },
-      },
-    ],
-    payment_intent_data: {
-      capture_method: "manual",
-      application_fee_amount: platformFeeCents,
-      transfer_data: {
-        destination: provider.stripeAccountId,
-      },
+    metadata: { bookingId: booking.id, paymentId: payment.id },
+    setup_intent_data: {
       metadata: { bookingId: booking.id, providerId: provider.id },
     },
   });
 
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { paymentIntentId: session.payment_intent as string },
+    data: { checkoutSessionId: session.id },
   });
 
   return NextResponse.json({ ok: true, bookingId: booking.id, checkoutUrl: session.url });

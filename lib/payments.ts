@@ -1,31 +1,16 @@
 import { prisma } from "@/lib/prisma";
-import { getStripe } from "@/lib/stripe";
+import { releaseFundsAndCompleteBooking } from "@/lib/payouts";
 
+/**
+ * Legacy name kept for minimal refactors.
+ * Under the new flow:
+ * - Customer is charged in full when the tech approves.
+ * - When BOTH parties confirm completion, we release funds to the tech (minus platform fee).
+ */
 export async function captureFullPaymentForBooking(bookingId: string) {
-  const booking = await prisma.booking.findUnique({
-    where: { id: bookingId },
-    include: { payment: true },
-  });
-  if (!booking || !booking.payment?.paymentIntentId) {
-    throw new Error("Missing payment intent");
-  }
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) throw new Error("Booking not found");
 
-  const stripe = getStripe();
-  const pi = await stripe.paymentIntents.capture(booking.payment.paymentIntentId);
-
-  await prisma.payment.update({
-    where: { id: booking.payment.id },
-    data: {
-      status: "CAPTURED",
-      latestChargeId: (pi.latest_charge as string) || null,
-    },
-  });
-
-  await prisma.booking.update({
-    where: { id: booking.id },
-    data: {
-      status: "COMPLETED",
-      completedAt: new Date(),
-    },
-  });
+  await releaseFundsAndCompleteBooking(bookingId);
 }
+

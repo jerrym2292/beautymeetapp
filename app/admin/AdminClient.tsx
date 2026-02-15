@@ -10,6 +10,9 @@ type AppRow = {
   phone: string;
   email: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  licenseType?: "COSMETOLOGY" | "ESTHETICIAN" | "NAIL_TECHNICIAN" | null;
+  licenseState?: string | null;
+  licenseNumber?: string | null;
 };
 
 export default function AdminClient() {
@@ -75,7 +78,7 @@ export default function AdminClient() {
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Admin approvals</h1>
@@ -140,8 +143,8 @@ const buttonStyle: React.CSSProperties = {
   marginTop: 10,
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

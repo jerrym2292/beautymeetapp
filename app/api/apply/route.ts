@@ -7,6 +7,11 @@ const Body = z.object({
   phone: z.string().min(7).max(30),
   email: z.string().email().nullable().optional(),
 
+  // Licensing (required before public listing)
+  licenseType: z.enum(["COSMETOLOGY", "ESTHETICIAN", "NAIL_TECHNICIAN"]).nullable().optional(),
+  licenseState: z.string().min(2).max(2).nullable().optional(),
+  licenseNumber: z.string().min(2).max(40).nullable().optional(),
+
   // Hidden from public. Used for service area + future distance.
   address1: z.string().min(3).max(120).nullable().optional(),
   address2: z.string().max(120).nullable().optional(),
@@ -25,13 +30,31 @@ export async function POST(req: Request) {
     );
   }
 
-  const { fullName, phone, email, address1, address2, city, state, zip } = parsed.data;
+  const {
+    fullName,
+    phone,
+    email,
+    licenseType,
+    licenseState,
+    licenseNumber,
+    address1,
+    address2,
+    city,
+    state,
+    zip,
+  } = parsed.data;
 
   const created = await prisma.providerApplication.create({
     data: {
       fullName,
       phone,
       email: email ?? null,
+
+      licenseType: licenseType ?? null,
+      licenseState: licenseState ?? null,
+      licenseNumber: licenseNumber ?? null,
+      licenseVerified: false,
+
       address1: address1 ?? null,
       address2: address2 ?? null,
       city: city ?? null,

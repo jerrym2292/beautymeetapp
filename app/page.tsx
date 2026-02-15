@@ -6,7 +6,7 @@ export default function HomePage() {
       <header style={{ padding: "18px 0" }}>
         <div style={{ fontSize: 28, fontWeight: 800 }}>Beauty Meet</div>
         <div style={{ opacity: 0.8, marginTop: 6 }}>
-          Atlanta booking for <b>lashes/brows</b> and <b>nails</b>.
+          Book trusted <b>lash</b>, <b>brow</b>, and <b>nail</b> techs—nationwide.
         </div>
       </header>
 
@@ -34,7 +34,7 @@ export default function HomePage() {
         >
           <div style={cardTitle}>I’m a tech / stylist</div>
           <div style={cardSub}>
-            Apply to join Beauty Meet (Atlanta) and accept booking requests.
+            Are you a tech / stylist? Apply to join Beauty Meet and start accepting bookings.
           </div>
         </Link>
 

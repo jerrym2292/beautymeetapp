@@ -9,7 +9,7 @@ export default async function CancelPage({
   const bookingId = sp.bookingId;
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Payment cancelled</h1>

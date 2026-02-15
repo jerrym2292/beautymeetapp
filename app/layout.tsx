@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Beauty Meet",
-  description: "Beauty Meet — Atlanta booking for lashes/brows and nails",
+  title: "BeautyMeetApp",
+  description: "BeautyMeetApp — Book nails, lashes & brows",
 };
 
 export default function RootLayout({
@@ -15,8 +15,8 @@ export default function RootLayout({
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji",
           margin: 0,
-          background: "#0b0b0f",
-          color: "#f5f5f7",
+          background: "#070709",
+          color: "#F5F2EA",
         }}
       >
         <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>

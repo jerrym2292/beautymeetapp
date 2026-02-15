@@ -40,7 +40,7 @@ function Inner() {
 
   return (
     <main>
-      <Link href="/login" style={{ color: "#c7d2fe" }}>
+      <Link href="/login" style={{ color: "#D4AF37" }}>
         ← Login
       </Link>
       <h1 style={{ marginTop: 12 }}>Choose a new password</h1>
@@ -84,8 +84,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

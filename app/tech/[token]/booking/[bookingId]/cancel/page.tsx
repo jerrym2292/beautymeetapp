@@ -14,7 +14,7 @@ export default async function TechCancelConfirmPage({
   if (!provider) {
     return (
       <main>
-        <Link href="/" style={{ color: "#c7d2fe" }}>
+        <Link href="/" style={{ color: "#D4AF37" }}>
           ← Home
         </Link>
         <h1 style={{ marginTop: 12 }}>Not authorized</h1>
@@ -30,7 +30,7 @@ export default async function TechCancelConfirmPage({
   if (!booking) {
     return (
       <main>
-        <Link href={`/tech/${token}`} style={{ color: "#c7d2fe" }}>
+        <Link href={`/tech/${token}`} style={{ color: "#D4AF37" }}>
           ← Back to dashboard
         </Link>
         <h1 style={{ marginTop: 12 }}>Booking not found</h1>
@@ -40,7 +40,7 @@ export default async function TechCancelConfirmPage({
 
   return (
     <main>
-      <Link href={`/tech/${token}`} style={{ color: "#c7d2fe" }}>
+      <Link href={`/tech/${token}`} style={{ color: "#D4AF37" }}>
         ← Back to dashboard
       </Link>
 
@@ -104,8 +104,8 @@ const card: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 900,
   width: "100%",

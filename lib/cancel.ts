@@ -5,6 +5,21 @@ export function hoursUntil(startAt: Date, now = new Date()) {
   return (startAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 }
 
+async function refundPaymentIntent(paymentIntentId: string, amountCents?: number) {
+  const stripe = getStripe();
+  return stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    ...(typeof amountCents === "number" ? { amount: amountCents } : {}),
+  });
+}
+
+/**
+ * Customer cancel rules under new flow:
+ * - Before approval/charge: just cancel request (no money taken)
+ * - After approval/charge:
+ *   - EARLY => full refund
+ *   - LATE  => keep 20% deposit, refund the rest
+ */
 export async function cancelBookingCustomer(bookingId: string, mode: "EARLY" | "LATE") {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -12,21 +27,26 @@ export async function cancelBookingCustomer(bookingId: string, mode: "EARLY" | "
   });
   if (!booking) throw new Error("Booking not found");
 
-  if (booking.status === "CANCELLED" || booking.status === "DECLINED") return;
+  if (booking.status === "CANCELLED" || booking.status === "DECLINED" || booking.status === "EXPIRED") return;
   if (booking.completedAt) throw new Error("Already completed");
 
-  const stripe = getStripe();
-  const pi = booking.payment?.paymentIntentId;
+  const payment = booking.payment;
+  const pi = payment?.paymentIntentId;
 
-  if (pi) {
+  if (pi && payment?.status === "CAPTURED") {
     if (mode === "EARLY") {
-      // Release full authorization.
-      await stripe.paymentIntents.cancel(pi).catch(() => null);
-      await prisma.payment.update({ where: { id: booking.payment!.id }, data: { status: "VOIDED" } });
+      const refund = await refundPaymentIntent(pi);
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "REFUNDED", latestRefundId: refund.id },
+      });
     } else {
-      // Capture only the deposit; rest is released.
-      await stripe.paymentIntents.capture(pi, { amount_to_capture: booking.depositCents }).catch(() => null);
-      await prisma.payment.update({ where: { id: booking.payment!.id }, data: { status: "CAPTURED" } });
+      const refundAmount = Math.max(0, booking.totalCents - booking.depositCents);
+      const refund = await refundPaymentIntent(pi, refundAmount);
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "REFUNDED", latestRefundId: refund.id },
+      });
     }
   }
 
@@ -36,6 +56,9 @@ export async function cancelBookingCustomer(bookingId: string, mode: "EARLY" | "
   });
 }
 
+/**
+ * Tech cancel => FULL refund if customer was charged.
+ */
 export async function cancelBookingByTechFullRefund(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -43,15 +66,18 @@ export async function cancelBookingByTechFullRefund(bookingId: string) {
   });
   if (!booking) throw new Error("Booking not found");
 
-  if (booking.status === "CANCELLED" || booking.status === "DECLINED") return;
+  if (booking.status === "CANCELLED" || booking.status === "DECLINED" || booking.status === "EXPIRED") return;
   if (booking.completedAt) throw new Error("Already completed");
 
-  const stripe = getStripe();
-  const pi = booking.payment?.paymentIntentId;
-  if (pi) {
-    // Tech cancellation is not the customer’s fault → full refund: release authorization.
-    await stripe.paymentIntents.cancel(pi).catch(() => null);
-    await prisma.payment.update({ where: { id: booking.payment!.id }, data: { status: "VOIDED" } });
+  const payment = booking.payment;
+  const pi = payment?.paymentIntentId;
+
+  if (pi && payment?.status === "CAPTURED") {
+    const refund = await refundPaymentIntent(pi);
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "REFUNDED", latestRefundId: refund.id },
+    });
   }
 
   await prisma.booking.update({
@@ -60,6 +86,9 @@ export async function cancelBookingByTechFullRefund(bookingId: string) {
   });
 }
 
+/**
+ * No-show => keep 20% deposit, refund remaining 80% (only if payment was captured).
+ */
 export async function markNoShowByTech(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -67,7 +96,7 @@ export async function markNoShowByTech(bookingId: string) {
   });
   if (!booking) throw new Error("Booking not found");
 
-  if (booking.status === "NO_SHOW" || booking.status === "CANCELLED" || booking.status === "DECLINED") return;
+  if (booking.status === "NO_SHOW" || booking.status === "CANCELLED" || booking.status === "DECLINED" || booking.status === "EXPIRED") return;
   if (booking.completedAt) throw new Error("Already completed");
 
   // Only allow no-show at/after appointment time.
@@ -75,11 +104,16 @@ export async function markNoShowByTech(bookingId: string) {
     throw new Error("Too early to mark no-show");
   }
 
-  const stripe = getStripe();
-  const pi = booking.payment?.paymentIntentId;
-  if (pi) {
-    await stripe.paymentIntents.capture(pi, { amount_to_capture: booking.depositCents }).catch(() => null);
-    await prisma.payment.update({ where: { id: booking.payment!.id }, data: { status: "CAPTURED" } });
+  const payment = booking.payment;
+  const pi = payment?.paymentIntentId;
+
+  if (pi && payment?.status === "CAPTURED") {
+    const refundAmount = Math.max(0, booking.totalCents - booking.depositCents);
+    const refund = await refundPaymentIntent(pi, refundAmount);
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "REFUNDED", latestRefundId: refund.id },
+    });
   }
 
   await prisma.booking.update({
