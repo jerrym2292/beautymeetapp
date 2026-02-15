@@ -6,4 +6,7 @@ node_modules
 # local/dev db + sqlite artifacts
 *.db
 
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
 /generated/prisma
