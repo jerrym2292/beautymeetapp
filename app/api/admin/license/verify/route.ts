@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "../_auth";
+import { requireAdmin } from "../../_auth";
 
 export const runtime = "nodejs";
 
