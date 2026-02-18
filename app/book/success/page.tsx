@@ -10,7 +10,7 @@ export default async function SuccessPage({
   const cancelToken = sp.cancelToken;
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Payment received</h1>
@@ -25,7 +25,7 @@ export default async function SuccessPage({
       </p>
       {cancelToken ? (
         <p style={{ marginTop: 8 }}>
-          <a style={{ color: "#c7d2fe" }} href={`/x/${cancelToken}`}>
+          <a style={{ color: "#D4AF37" }} href={`/x/${cancelToken}`}>
             /x/{cancelToken}
           </a>
         </p>

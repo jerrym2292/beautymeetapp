@@ -3,13 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+type IntakeQuestion = {
+  id: string;
+  text: string;
+  type: "TEXT" | "YES_NO";
+  required: boolean;
+};
+
 type Provider = {
   id: string;
   displayName: string;
   mode: "FIXED" | "MOBILE" | "BOTH";
   maxTravelMiles: number | null;
   travelRateCents: number;
-  services: { id: string; name: string; durationMin: number; priceCents: number; category: string }[];
+  services: { 
+    id: string; 
+    name: string; 
+    durationMin: number; 
+    priceCents: number; 
+    category: string;
+    questions: IntakeQuestion[];
+  }[];
 };
 
 export default function ProviderBookingPage({
@@ -36,6 +50,7 @@ export default function ProviderBookingPage({
   const [startAt, setStartAt] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [notes, setNotes] = useState("");
+  const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
 
   const [submitStatus, setSubmitStatus] = useState<"idle"|"submitting"|"success"|"error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -64,7 +79,17 @@ export default function ProviderBookingPage({
     const res = await fetch(`/api/bookings`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes: notes || null }),
+      body: JSON.stringify({ 
+        providerId, 
+        fullName, 
+        phone, 
+        customerZip, 
+        serviceId, 
+        startAt, 
+        isMobile, 
+        notes: notes || null,
+        intakeAnswers: Object.entries(intakeAnswers).map(([questionId, text]) => ({ questionId, text }))
+      }),
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -84,7 +109,7 @@ export default function ProviderBookingPage({
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>← Home</Link>
+      <Link href="/" style={{ color: "#D4AF37" }}>← Home</Link>
 
       {err ? (
         <div style={{ marginTop: 14, color: "#fecaca" }}>{err}</div>
@@ -121,6 +146,37 @@ export default function ProviderBookingPage({
                   ))}
                 </select>
               </Field>
+
+              {/* Dynamic Intake Questions */}
+              {selectedService?.questions && selectedService.questions.length > 0 && (
+                <div style={{ padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 10, display: "grid", gap: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>Service Questions</div>
+                  {selectedService.questions.map(q => (
+                    <Field key={q.id} label={q.text + (q.required ? " *" : "")}>
+                      {q.type === "YES_NO" ? (
+                        <select 
+                          required={q.required} 
+                          style={input as any}
+                          value={intakeAnswers[q.id] || ""}
+                          onChange={(e) => setIntakeAnswers({...intakeAnswers, [q.id]: e.target.value})}
+                        >
+                          <option value="">Select...</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      ) : (
+                        <input 
+                          required={q.required} 
+                          style={input} 
+                          value={intakeAnswers[q.id] || ""}
+                          onChange={(e) => setIntakeAnswers({...intakeAnswers, [q.id]: e.target.value})}
+                        />
+                      )}
+                    </Field>
+                  ))}
+                </div>
+              )}
+
               <Field label="Requested date/time">
                 <input value={startAt} onChange={(e)=>setStartAt(e.target.value)} required style={input} placeholder="YYYY-MM-DD HH:MM" />
               </Field>
@@ -135,10 +191,18 @@ export default function ProviderBookingPage({
               </Field>
 
               {selectedService ? (
-                <div style={{ opacity: 0.85, fontSize: 13, lineHeight: 1.35 }}>
-                  You’ll pay the <b>full amount</b> now (authorized/held) and it’s captured when the service is completed.
-                  Security deposit is <b>20%</b> of total. Platform fee is <b>5%</b> of service price.
-                  Travel fee is <b>$1/mile</b> (ZIP estimate).
+                <div style={{ padding: 12, background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={{ fontSize: 20 }}>🛡️</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                    <div style={{ fontWeight: 800, color: "#4ade80", marginBottom: 2 }}>Secure Escrow Protection</div>
+                    Your full payment is <b>authorized and held securely</b>. Funds are only released to the professional once the service is confirmed as completed.
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedService ? (
+                <div style={{ opacity: 0.85, fontSize: 12, lineHeight: 1.35, padding: "0 4px" }}>
+                  Security deposit is <b>20%</b>. Platform fee is <b>5%</b>. Travel fee (if mobile) is <b>$1/mile</b> (ZIP estimate).
                 </div>
               ) : null}
 
@@ -159,7 +223,7 @@ export default function ProviderBookingPage({
 
 function Field({ label, children }: {label: string; children: React.ReactNode}) {
   return (
-    <label style={{ display: 'block' }}>
+    <label style={{ display: "block" }}>
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 6 }}>{label}</div>
       {children}
     </label>
@@ -179,8 +243,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

@@ -15,10 +15,14 @@ const Body = z.object({
   startAt: z.string().min(10),
   isMobile: z.boolean().default(false),
   notes: z.string().nullable().optional(),
+  affiliateCode: z.string().nullable().optional(),
+  intakeAnswers: z.array(z.object({
+    questionId: z.string(),
+    text: z.string(),
+  })).optional(),
 });
 
 function parseStartAt(s: string): Date {
-  // Accept "YYYY-MM-DD HH:MM" or ISO
   if (s.includes("T")) return new Date(s);
   const parts = s.trim().split(/\s+/);
   if (parts.length !== 2) return new Date("invalid");
@@ -37,28 +41,51 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid booking request" }, { status: 400 });
   }
 
-  const { providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes } = parsed.data;
+  const { providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes, intakeAnswers, affiliateCode } = parsed.data;
 
   const provider = await prisma.provider.findUnique({ where: { id: providerId } });
   if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 });
 
-  if (!provider.stripeAccountId) {
-    return NextResponse.json({ error: "This tech is not ready for payments yet." }, { status: 409 });
-  }
-
-  const service = await prisma.service.findFirst({ where: { id: serviceId, providerId, active: true } });
+  const service = await prisma.service.findFirst({ 
+    where: { id: serviceId, providerId, active: true },
+    include: { questions: true }
+  });
   if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
 
   const start = parseStartAt(startAt);
   if (isNaN(start.getTime())) return NextResponse.json({ error: "Invalid date/time" }, { status: 400 });
 
+  // 1. Check for Affiliate & First-Time Status
+  let affiliate = null;
+  let isFirstBooking = false;
+  
+  const existingCustomer = await prisma.customer.findUnique({ where: { phone } });
+  if (!existingCustomer) {
+    isFirstBooking = true;
+  } else {
+    const previousBooking = await prisma.booking.findFirst({ where: { customerId: existingCustomer.id, status: "COMPLETED" } });
+    if (!previousBooking) isFirstBooking = true;
+  }
+
+  if (affiliateCode && isFirstBooking) {
+    affiliate = await prisma.affiliate.findUnique({ where: { code: affiliateCode.toUpperCase() } });
+  }
+
+  // 2. Calculations
   const estimatedMiles = isMobile ? estimateMilesZip(provider.baseZip, customerZip) : 0;
   const travelFeeCents = isMobile ? estimatedMiles * provider.travelRateCents : 0;
+  
+  let servicePriceCents = service.priceCents;
+  if (affiliate) {
+    servicePriceCents = Math.round(servicePriceCents * 0.9); // 10% discount
+  }
 
-  const servicePriceCents = service.priceCents;
-  const totalCents = servicePriceCents + travelFeeCents; // customer pays this total
-  const platformFeeCents = Math.round(servicePriceCents * 0.05); // 5% of service
-  const depositCents = Math.round(totalCents * 0.2); // security deposit (20% of total)
+  const totalCents = servicePriceCents + travelFeeCents; 
+  const platformFeeCents = Math.round(servicePriceCents * 0.05); 
+  const depositCents = Math.round(totalCents * 0.2); 
+  
+  // Split platform fee with affiliate (2.5% of service price)
+  const affiliateCommissionCents = affiliate ? Math.floor(platformFeeCents * 0.5) : 0;
 
   const customer = await prisma.customer.upsert({
     where: { phone },
@@ -98,6 +125,14 @@ export async function POST(req: Request) {
       paymentId: payment.id,
       customerConfirmToken,
       customerCancelToken,
+      affiliateId: affiliate?.id,
+      affiliateCommissionCents,
+      intakeAnswers: intakeAnswers ? {
+        create: intakeAnswers.map(a => ({
+          questionId: a.questionId,
+          text: a.text
+        }))
+      } : undefined
     },
     select: { id: true },
   });
@@ -119,7 +154,7 @@ export async function POST(req: Request) {
           unit_amount: totalCents,
           product_data: {
             name: `${provider.displayName} — ${service.name}`,
-            description: isMobile ? `Mobile (${estimatedMiles} mi est.)` : `In-studio`,
+            description: affiliate ? `Discount applied (Code: ${affiliate.code})` : (isMobile ? `Mobile (${estimatedMiles} mi est.)` : `In-studio`),
           },
         },
       },
@@ -128,7 +163,7 @@ export async function POST(req: Request) {
       capture_method: "manual",
       application_fee_amount: platformFeeCents,
       transfer_data: {
-        destination: provider.stripeAccountId,
+        destination: provider.stripeAccountId!,
       },
       metadata: { bookingId: booking.id, providerId: provider.id },
     },

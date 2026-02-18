@@ -17,7 +17,7 @@ export async function GET(
       services: {
         where: { active: true },
         orderBy: { priceCents: "asc" },
-        select: { id: true, name: true, durationMin: true, priceCents: true, category: true },
+        select: { id: true, name: true, durationMin: true, priceCents: true, category: true, questions: true },
       },
     },
   });

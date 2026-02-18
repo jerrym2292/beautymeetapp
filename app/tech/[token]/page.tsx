@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import IntakeFormManager from "./IntakeFormManager";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,13 @@ export default async function TechDashboard({
   const provider = await prisma.provider.findUnique({
     where: { accessToken: token },
     include: {
-      services: { orderBy: { createdAt: "desc" } },
+      services: { 
+        orderBy: { createdAt: "desc" },
+        include: { questions: true }
+      },
       bookings: {
         orderBy: { createdAt: "desc" },
-        include: { customer: true, service: true },
+        include: { customer: true, service: true, intakeAnswers: { include: { question: true } } },
         take: 25,
       },
     },
@@ -25,7 +29,7 @@ export default async function TechDashboard({
   if (!provider) {
     return (
       <main>
-        <Link href="/" style={{ color: "#c7d2fe" }}>
+        <Link href="/" style={{ color: "#D4AF37" }}>
           ← Home
         </Link>
         <h1 style={{ marginTop: 12 }}>Tech dashboard</h1>
@@ -36,7 +40,7 @@ export default async function TechDashboard({
 
   return (
     <main>
-      <Link href="/" style={{ color: "#c7d2fe" }}>
+      <Link href="/" style={{ color: "#D4AF37" }}>
         ← Home
       </Link>
       <h1 style={{ marginTop: 12 }}>Tech dashboard</h1>
@@ -68,7 +72,7 @@ export default async function TechDashboard({
       <section style={card}>
         <div style={{ fontWeight: 800 }}>Public booking link</div>
         <div style={{ opacity: 0.85, marginTop: 6 }}>
-          <a style={{ color: "#c7d2fe" }} href={`/p/${provider.id}`}>
+          <a style={{ color: "#D4AF37" }} href={`/p/${provider.id}`}>
             /p/{provider.id}
           </a>
         </div>
@@ -128,6 +132,9 @@ export default async function TechDashboard({
               <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
                 {s.category} • {s.durationMin} min • ${(s.priceCents / 100).toFixed(2)}
               </div>
+              
+              <IntakeFormManager token={token} serviceId={s.id} initialQuestions={s.questions} />
+
               <form
                 action={`/api/provider/${provider.accessToken}/service/${s.id}/toggle`}
                 method="post"
@@ -153,6 +160,19 @@ export default async function TechDashboard({
               <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
                 {new Date(b.startAt).toLocaleString()} • {b.isMobile ? "Mobile" : "In-studio"}
               </div>
+              
+              {/* Show Intake Answers */}
+              {b.intakeAnswers.length > 0 && (
+                <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Intake Answers:</div>
+                  {b.intakeAnswers.map(ans => (
+                    <div key={ans.id} style={{ fontSize: 12, marginBottom: 2 }}>
+                      <b>{ans.question.text}:</b> {ans.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
                 Status: <b>{b.status}</b>
               </div>
@@ -180,7 +200,7 @@ export default async function TechDashboard({
                   <div>
                     <div style={{ fontSize: 12, opacity: 0.7 }}>Customer completion link:</div>
                     <div style={{ marginTop: 6 }}>
-                      <a style={{ color: "#c7d2fe", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
+                      <a style={{ color: "#D4AF37", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
                         /c/{(b as any).customerConfirmToken}
                       </a>
                     </div>
@@ -230,8 +250,8 @@ const input: React.CSSProperties = {
 const btn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(99,102,241,0.4)",
-  background: "rgba(99,102,241,0.18)",
+  border: "1px solid rgba(212,175,55,0.4)",
+  background: "rgba(212,175,55,0.18)",
   color: "#eef2ff",
   fontWeight: 800,
   width: "100%",

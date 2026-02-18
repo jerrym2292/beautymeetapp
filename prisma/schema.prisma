@@ -115,7 +115,36 @@ model Service {
   priceCents  Int
   active      Boolean         @default(true)
 
-  bookings Booking[]
+  bookings  Booking[]
+  questions IntakeQuestion[]
+}
+
+model IntakeQuestion {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  text     String
+  required Boolean @default(true)
+  type     String  @default("TEXT") // TEXT, YES_NO
+
+  answers IntakeAnswer[]
+}
+
+model IntakeAnswer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   IntakeQuestion @relation(fields: [questionId], references: [id])
+
+  text String
 }
 
 model Customer {
@@ -160,6 +189,11 @@ model Booking {
   travelFeeCents    Int
   totalCents        Int // service + travel (what customer pays)
 
+  // Affiliate
+  affiliateId String?
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+  affiliateCommissionCents Int @default(0)
+
   // completion confirmations (both must confirm)
   providerConfirmedAt DateTime?
   customerConfirmedAt DateTime?
@@ -170,6 +204,8 @@ model Booking {
 
   paymentId String?  @unique
   payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  intakeAnswers IntakeAnswer[]
 }
 
 model Payment {
@@ -190,12 +226,31 @@ model Payment {
   booking Booking?
 }
 
+// ---- Affiliate ----
+
+model Affiliate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  code      String   @unique
+  fullName  String
+  email     String   @unique
+  phone     String?
+  
+  balanceCents Int @default(0)
+  
+  bookings Booking[]
+  user     User?
+}
+
 // ---- Auth ----
 
 enum UserRole {
   CUSTOMER
   PROVIDER
   ADMIN
+  AFFILIATE
 }
 
 model User {
@@ -209,6 +264,9 @@ model User {
 
   providerId String?   @unique
   provider   Provider? @relation(fields: [providerId], references: [id])
+
+  affiliateId String?   @unique
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
 
   sessions    Session[]
   resetTokens PasswordResetToken[]

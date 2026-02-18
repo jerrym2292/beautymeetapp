@@ -9,13 +9,13 @@ export default async function AdminPage() {
   if (!user) {
     return (
       <main>
-        <Link href="/" style={{ color: "#c7d2fe" }}>
+        <Link href="/" style={{ color: "#D4AF37" }}>
           ← Home
         </Link>
         <h1 style={{ marginTop: 12 }}>Admin</h1>
         <p style={{ opacity: 0.85 }}>Please log in.</p>
         <p>
-          <Link href="/login" style={{ color: "#c7d2fe" }}>
+          <Link href="/login" style={{ color: "#D4AF37" }}>
             Go to login
           </Link>
         </p>
@@ -26,7 +26,7 @@ export default async function AdminPage() {
   if (user.role !== "ADMIN") {
     return (
       <main>
-        <Link href="/" style={{ color: "#c7d2fe" }}>
+        <Link href="/" style={{ color: "#D4AF37" }}>
           ← Home
         </Link>
         <h1 style={{ marginTop: 12 }}>Admin</h1>
@@ -35,5 +35,34 @@ export default async function AdminPage() {
     );
   }
 
-  return <AdminClient />;
+  return (
+    <main>
+      <Link href="/" style={{ color: "#D4AF37" }}>
+        ← Home
+      </Link>
+      <h1 style={{ marginTop: 12 }}>Admin dashboard</h1>
+      
+      <div style={{ display: "grid", gap: 16, marginTop: 20 }}>
+        <Link href="/admin/approvals" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Provider Approvals</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>Review and approve new beauty technicians.</div>
+        </Link>
+
+        <Link href="/admin/affiliates" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Affiliate Management</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>Manage affiliate codes and balance payouts.</div>
+        </Link>
+      </div>
+    </main>
+  );
 }
+
+const adminCard: React.CSSProperties = {
+  padding: 20,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.1)",
+  background: "rgba(255,255,255,0.05)",
+  textDecoration: "none",
+  color: "inherit",
+  display: "block"
+};
