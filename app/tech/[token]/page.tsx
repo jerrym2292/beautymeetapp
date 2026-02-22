@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import IntakeFormManager from "./IntakeFormManager";
+import ModeToggle from "./ModeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,33 @@ export default async function TechDashboard({
       <div style={{ opacity: 0.8, marginTop: 4 }}>
         Provider: <b>{provider.displayName}</b>
       </div>
+
+      <section style={card}>
+        <div style={{ fontWeight: 800 }}>Service Mode</div>
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+          Choose how you want to work (Studio, Mobile, or Both). 
+          Travel is charged at $1/mile.
+        </div>
+        <ModeToggle token={token} initialMode={provider.mode} />
+      </section>
+
+      <section style={card}>
+        <div style={{ fontWeight: 800 }}>Work Mode</div>
+        <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+          Current: <b>{provider.mode === "BOTH" ? "In-Studio & Mobile" : provider.mode === "MOBILE" ? "Mobile Only" : "In-Studio Only"}</b>
+        </div>
+        <form action={`/api/provider/${provider.accessToken}/mode`} method="post" style={{ marginTop: 10, display: "flex", gap: 8 }}>
+          <select name="mode" defaultValue={provider.mode} style={{ ...input, flex: 1 }}>
+            <option value="FIXED">In-Studio Only</option>
+            <option value="MOBILE">Mobile Only</option>
+            <option value="BOTH">In-Studio & Mobile</option>
+          </select>
+          <button style={{ ...btn, width: "auto" }} type="submit">Update</button>
+        </form>
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+          This determines if customers see the mobile booking option.
+        </div>
+      </section>
 
       <section style={card}>
         <div style={{ fontWeight: 800 }}>Payments (Stripe)</div>

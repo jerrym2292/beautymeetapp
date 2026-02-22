@@ -35,11 +35,12 @@ function estimateMilesZip(fromZip: string, toZip: string): number {
 }
 
 export async function POST(req: Request) {
-  const json = await req.json().catch(() => null);
-  const parsed = Body.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid booking request" }, { status: 400 });
-  }
+  try {
+    const json = await req.json().catch(() => null);
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid booking request" }, { status: 400 });
+    }
 
   const { providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes, intakeAnswers, affiliateCode } = parsed.data;
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
   const start = parseStartAt(startAt);
   if (isNaN(start.getTime())) return NextResponse.json({ error: "Invalid date/time" }, { status: 400 });
 
-  // 1. Check for Affiliate & First-Time Status
+  // 1. Check for First-Time Status
   let affiliate = null;
   let isFirstBooking = false;
   
@@ -67,25 +68,35 @@ export async function POST(req: Request) {
     if (!previousBooking) isFirstBooking = true;
   }
 
+  // Affiliate code only applies to first-time bookings
   if (affiliateCode && isFirstBooking) {
     affiliate = await prisma.affiliate.findUnique({ where: { code: affiliateCode.toUpperCase() } });
   }
 
-  // 2. Calculations
+  // 2. Pricing Calculations
   const estimatedMiles = isMobile ? estimateMilesZip(provider.baseZip, customerZip) : 0;
-  const travelFeeCents = isMobile ? estimatedMiles * provider.travelRateCents : 0;
+  const travelFeeCents = isMobile ? estimatedMiles * provider.travelRateCents : 0; // $1/mile
   
-  let servicePriceCents = service.priceCents;
-  if (affiliate) {
-    servicePriceCents = Math.round(servicePriceCents * 0.9); // 10% discount
+  const baseServicePriceCents = service.priceCents;
+  
+  // Platform Fee Logic:
+  // - First Time: 5% platform + 10% affiliate (if applicable) = 15% (or 5% if no affiliate)
+  // - Repeat: 5% platform
+  let platformFeeCents = Math.round(baseServicePriceCents * 0.05);
+  let affiliateCommissionCents = 0;
+
+  if (isFirstBooking && affiliate) {
+    affiliateCommissionCents = Math.round(baseServicePriceCents * 0.10);
   }
 
-  const totalCents = servicePriceCents + travelFeeCents; 
-  const platformFeeCents = Math.round(servicePriceCents * 0.05); 
-  const depositCents = Math.round(totalCents * 0.2); 
-  
-  // Split platform fee with affiliate (2.5% of service price)
-  const affiliateCommissionCents = affiliate ? Math.floor(platformFeeCents * 0.5) : 0;
+  // Total Deducted from Provider Payout (Platform 5% + Affiliate 10%)
+  const totalDeductedCents = platformFeeCents + affiliateCommissionCents;
+
+  // Stripe Fee Logic: 3% added on top for customer
+  const stripeFeeCents = Math.round((baseServicePriceCents + travelFeeCents) * 0.03);
+
+  // Grand Total for Customer: Price + Travel + Stripe Fee
+  const totalCents = baseServicePriceCents + travelFeeCents + stripeFeeCents;
 
   const customer = await prisma.customer.upsert({
     where: { phone },
@@ -117,9 +128,10 @@ export async function POST(req: Request) {
       isMobile,
       customerZip,
       estimatedMiles: isMobile ? estimatedMiles : null,
-      servicePriceCents,
+      servicePriceCents: baseServicePriceCents,
       platformFeeCents,
-      depositCents,
+      stripeFeeCents,
+      depositCents: Math.round(totalCents * 0.2), // 20% deposit
       travelFeeCents,
       totalCents,
       paymentId: payment.id,
@@ -137,10 +149,36 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  const stripe = getStripe();
   const baseUrl = process.env.APP_BASE_URL || new URL(req.url).origin;
 
-  const session = await stripe.checkout.sessions.create({
+  // Payments
+  // - Production: STRIPE_SECRET_KEY must be set.
+  // - Dev/test: allow a "demo" fallback that completes the flow without Stripe so the site
+  //   can be exercised end-to-end even before keys are configured.
+  if (!process.env.STRIPE_SECRET_KEY) {
+    if (process.env.NODE_ENV !== "production") {
+      return NextResponse.json({
+        ok: true,
+        bookingId: booking.id,
+        checkoutUrl: `${baseUrl}/book/success?bookingId=${booking.id}&demo=1&cancelToken=${customerCancelToken}`,
+      });
+    }
+    return NextResponse.json(
+      { error: "Payments are not configured. Please try again later." },
+      { status: 500 }
+    );
+  }
+
+  const stripe = getStripe();
+
+  // Final Stripe Session
+  // NOTE: `transfer_data.destination` + `application_fee_amount` require Stripe Connect.
+  // In local/dev, providers may not have a connected account yet; in that case we fall back
+  // to a standard Checkout session (no destination transfer) so the rest of the booking flow
+  // can be tested end-to-end.
+  const connectPayoutEnabled = !!provider.stripeAccountId;
+
+  const checkoutParams = {
     mode: "payment",
     customer_creation: "if_required",
     success_url: `${baseUrl}/book/success?bookingId=${booking.id}&cancelToken=${customerCancelToken}`,
@@ -151,23 +189,62 @@ export async function POST(req: Request) {
         quantity: 1,
         price_data: {
           currency: "usd",
-          unit_amount: totalCents,
+          unit_amount: baseServicePriceCents + travelFeeCents,
           product_data: {
             name: `${provider.displayName} — ${service.name}`,
-            description: affiliate ? `Discount applied (Code: ${affiliate.code})` : (isMobile ? `Mobile (${estimatedMiles} mi est.)` : `In-studio`),
+            description: isMobile ? `Mobile Appointment (${estimatedMiles} mi)` : `In-Studio`,
           },
         },
       },
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: stripeFeeCents,
+          product_data: {
+            name: `Processing Fee`,
+            description: `3% secure payment processing`,
+          },
+        },
+      }
     ],
     payment_intent_data: {
       capture_method: "manual",
-      application_fee_amount: platformFeeCents,
-      transfer_data: {
-        destination: provider.stripeAccountId!,
-      },
-      metadata: { bookingId: booking.id, providerId: provider.id },
+      metadata: { bookingId: booking.id, providerId: provider.id, connectPayoutEnabled: String(connectPayoutEnabled) },
+      ...(connectPayoutEnabled ? {
+        application_fee_amount: totalDeductedCents, // Platform keeps 5% (+ 10% affiliate on first booking)
+        transfer_data: { destination: provider.stripeAccountId! },
+      } : {}),
     },
-  });
+  } as const;
+
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create(checkoutParams as any);
+  } catch (e: any) {
+    // If the connected account exists but isn't fully onboarded / lacks transfers capability,
+    // Stripe can reject `transfer_data.destination` in a few different ways depending on account state.
+    // Fall back to a non-Connect session so the booking flow can still be exercised.
+    const msg = String(e?.message || "");
+    const param = String(e?.param || "");
+    const looksLikeConnectTransferError =
+      param.startsWith("payment_intent_data[transfer_data]") ||
+      param === "payment_intent_data[transfer_data][destination]" ||
+      /stripe_transfers|transfers feature|transfer_data\.destination/i.test(msg);
+
+    if (connectPayoutEnabled && looksLikeConnectTransferError) {
+      const fallbackParams = {
+        ...checkoutParams,
+        payment_intent_data: {
+          capture_method: "manual",
+          metadata: { bookingId: booking.id, providerId: provider.id, connectPayoutEnabled: "false" },
+        },
+      };
+      session = await stripe.checkout.sessions.create(fallbackParams as any);
+    } else {
+      throw e;
+    }
+  }
 
   await prisma.payment.update({
     where: { id: payment.id },
@@ -175,4 +252,11 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ ok: true, bookingId: booking.id, checkoutUrl: session.url });
+  } catch (e: any) {
+    console.error("/api/bookings POST failed", e);
+    return NextResponse.json(
+      { error: e?.message || "Booking failed" },
+      { status: 500 }
+    );
+  }
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Provider = {
   id: string;
@@ -17,9 +18,10 @@ type Provider = {
 };
 
 export default function BookPage() {
-  const [zip, setZip] = useState("");
-  const [radius, setRadius] = useState<10 | 25 | 50>(25);
-  const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS">("ALL");
+  const sp = useSearchParams();
+  const [zip, setZip] = useState(sp.get("zip") || "");
+  const [radius, setRadius] = useState<10 | 25 | 50>((Number(sp.get("radius")) as any) || 25);
+  const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS">((sp.get("category") as any) || "ALL");
 
   const [results, setResults] = useState<Provider[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");

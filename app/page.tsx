@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import HeroSearch from "@/app/components/HeroSearch";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -9,21 +10,25 @@ export default async function HomePage() {
       {/* Hero Section */}
       <header style={heroSection}>
         <div style={{ maxWidth: 700 }}>
-          <div style={badge}>Atlanta’s Elite Beauty Collective</div>
+          <div style={badge}>The Nation's Elite Beauty Collective</div>
           <h1 style={heroTitle}>Where Artistry Meets <span style={{ color: "#D4AF37" }}>Ownership</span>.</h1>
           <p style={heroSub}>
             The only beauty marketplace that doesn't tax your loyalty. 
-            Book Atlanta’s top lash, brow, and nail artists—or join the network that respects your bottom line.
+            Book top lash, brow, and nail artists across the US—or join the network that respects your bottom line.
           </p>
           <div style={heroActions}>
             <Link href="/book" style={primaryButton}>Find an Artist</Link>
             {!user && <Link href="/login" style={secondaryButton}>Partner Login</Link>}
-            {user && <Link href={user.role === "AFFILIATE" ? "/affiliate/dashboard" : user.role === "ADMIN" ? "/admin" : "/tech/dashboard"} style={secondaryButton}>My Dashboard</Link>}
+            {user && <Link href={user.role === "AFFILIATE" ? "/affiliate/dashboard" : user.role === "ADMIN" ? "/admin" : user.providerId ? `/tech/${user.providerId}` : "/tech/dashboard"} style={secondaryButton}>My Dashboard</Link>}
+          </div>
+
+          <div style={{ marginTop: 16, maxWidth: 640 }}>
+            <HeroSearch />
           </div>
         </div>
       </header>
 
-      {/* Comparison Section (Attacking Vagaro/GlossGenius) */}
+      {/* Comparison Section */}
       <section style={{ marginTop: 80 }}>
         <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: 40 }}>The Beauty Meet Advantage</h2>
         <div style={comparisonGrid}>
@@ -41,31 +46,56 @@ export default async function HomePage() {
             <h4 style={{ ...compHeader, color: "#D4AF37" }}>Beauty Meet</h4>
             <p style={compSub}>The Modern Alternative</p>
             <ul style={compList}>
-              <li>✅ 0% Fee on Repeat Clients</li>
-              <li>✅ Flat, transparent platform fee</li>
-              <li>✅ Mobile-first, sleek experience</li>
+              <li>✅ 15% One-Time Referral Fee</li>
+              <li>✅ Only 5% on Repeat Clients</li>
+              <li>✅ Flat $19.99/mo Membership</li>
               <li>✅ Rising Star visibility boost</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Feature Grid */}
       <section style={gridSection}>
         <div style={strengthCard}>
-          <div style={strengthIcon}>📱</div>
-          <h3 style={strengthTitle}>Aesthetic Booking</h3>
-          <p style={strengthText}>Unlike the clunky UI of GlossGenius, our booking flow is designed to look as good as your work.</p>
+          <div style={strengthIcon}>📝</div>
+          <h3 style={strengthTitle}>Custom Intake Forms</h3>
+          <p style={strengthText}>Gather essential client info and waivers automatically before they ever step into your chair.</p>
         </div>
         <div style={strengthCard}>
-          <div style={strengthIcon}>💰</div>
-          <h3 style={strengthTitle}>Fast Payouts</h3>
-          <p style={strengthText}>Integrated with Stripe Connect. Your money goes straight to your bank, no waiting for weekly cycles.</p>
+          <div style={strengthIcon}>⭐</div>
+          <h3 style={strengthTitle}>Rising Star Algorithm</h3>
+          <p style={strengthText}>New to the platform? Our algorithm boosts verified talent so you get discovered fast, regardless of review count.</p>
         </div>
         <div style={strengthCard}>
-          <div style={strengthIcon}>📍</div>
-          <h3 style={strengthTitle}>Mobile or Studio</h3>
-          <p style={strengthText}>Whether you travel to clients or have a fixed spot in ATL, we handle the logistics and travel fees.</p>
+          <div style={strengthIcon}>🚀</div>
+          <h3 style={strengthTitle}>Free Data Import</h3>
+          <p style={strengthText}>Switching from StyleSeat or Vagaro? We'll help you migrate your client list and photos in minutes.</p>
+        </div>
+      </section>
+
+      {/* Savings Calculator Section */}
+      <section style={{ marginTop: 80, padding: 40, borderRadius: 28, background: "#111", border: "1px solid #D4AF37" }}>
+        <h2 style={{ fontSize: 28, marginBottom: 20 }}>See Your Savings</h2>
+        <p style={{ opacity: 0.7, marginBottom: 30 }}>Compare your monthly take-home on Beauty Meet vs. StyleSeat.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 40, alignItems: "center" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: 10, fontSize: 14 }}>Monthly Revenue ($)</label>
+            <input type="number" defaultValue="5000" style={calcInput} />
+          </div>
+          <div style={{ display: "grid", gap: 15 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>StyleSeat (30% New Client Avg)</span>
+              <span style={{ color: "#ff4d4d" }}>-$950</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+              <span>Beauty Meet (5% Total)</span>
+              <span style={{ color: "#4dff4d" }}>-$250</span>
+            </div>
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.1)", fontSize: 20, fontWeight: 900 }}>
+              Extra Profit: <span style={{ color: "#D4AF37" }}>+$700/mo</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -76,7 +106,7 @@ export default async function HomePage() {
           <div style={{ textAlign: "center" }}>
             <div style={stepCircle}>1</div>
             <h4 style={{ marginTop: 16 }}>Discovery</h4>
-            <p style={{ opacity: 0.6, fontSize: 14 }}>Browse verified Atlanta artists by their real work, not just stars.</p>
+            <p style={{ opacity: 0.6, fontSize: 14 }}>Browse verified artists by their real work, not just stars.</p>
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={stepCircle}>2</div>
@@ -95,13 +125,13 @@ export default async function HomePage() {
       <section style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         <div style={ctaBox}>
           <h2 style={{ fontSize: 24, marginBottom: 12 }}>Need an Appointment?</h2>
-          <p style={{ opacity: 0.8, marginBottom: 20 }}>Join the thousands of Atlanta locals booking through Beauty Meet.</p>
+          <p style={{ opacity: 0.8, marginBottom: 20 }}>Book top artists near you with transparent pricing and secure deposits.</p>
           <Link href="/book" style={ctaButton}>Book Now</Link>
         </div>
 
         <div style={{ ...ctaBox, border: "1px solid rgba(212,175,55,0.3)", background: "rgba(212,175,55,0.05)" }}>
           <h2 style={{ fontSize: 24, marginBottom: 12 }}>Ready to Scale?</h2>
-          <p style={{ opacity: 0.8, marginBottom: 20 }}>Stop paying "referral fees" for clients you already know. Join the collective.</p>
+          <p style={{ opacity: 0.8, marginBottom: 20 }}>Stop paying "referral fees" for clients you already know. Join for just $19.99/mo.</p>
           <Link href="/tech/apply" style={{ ...ctaButton, background: "#D4AF37", color: "#000" }}>Apply as Artist</Link>
         </div>
       </section>
@@ -110,7 +140,10 @@ export default async function HomePage() {
       <section style={affiliateSection}>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: 22 }}>Earn with Beauty Meet</h2>
-          <p style={{ opacity: 0.8 }}>Join our Affiliate program and earn 2.5% on every booking you refer. Forever.</p>
+          <p style={{ opacity: 0.8 }}>
+            Earn 10% commission on the first booking for every customer you refer. 
+            Plus, get a 10% one-time bonus for every professional you bring to the network.
+          </p>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Link href="/login" style={{ ...secondaryButton, padding: "12px 24px", fontSize: 14 }}>Affiliate Login</Link>
@@ -119,7 +152,7 @@ export default async function HomePage() {
       </section>
 
       <footer style={{ marginTop: 80, opacity: 0.4, fontSize: 13, textAlign: "center" }}>
-        © 2026 Beauty Meet. All rights reserved. Built for Atlanta Artists.
+        © 2026 Beauty Meet. All rights reserved. Built for Elite Artists.
       </footer>
     </main>
   );
@@ -302,23 +335,14 @@ const affiliateLink: React.CSSProperties = {
   fontSize: 17
 };
 
-const cardStyle: React.CSSProperties = {
-  display: "block",
-  padding: 16,
-  borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.10)",
-  background: "rgba(255,255,255,0.04)",
-  textDecoration: "none",
-  color: "inherit",
-};
-
-const cardTitle: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 800,
-};
-
-const cardSub: React.CSSProperties = {
-  marginTop: 6,
-  opacity: 0.85,
-  lineHeight: 1.35,
+const calcInput: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#f5f5f7",
+  outline: "none",
+  fontSize: 24,
+  fontWeight: 700
 };

@@ -3,8 +3,199 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model ProviderApplication {
+  id        String            @id @default(cuid())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  fullName  String
+  phone     String
+  email     String?
+  address1  String?
+  address2  String?
+  city      String?
+  state     String?
+  zip       String?
+  status    ApplicationStatus @default(PENDING)
+  notes     String?
+  provider  Provider?
+}
+
+model Provider {
+  id                   String              @id @default(cuid())
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  applicationId        String              @unique
+  accessToken          String              @unique
+  displayName          String
+  bio                  String?
+  instagram            String?
+  mode                 ProviderMode
+  baseAddress1         String
+  baseAddress2         String?
+  baseCity             String
+  baseState            String
+  baseZip              String
+  maxTravelMiles       Int?
+  travelRateCents      Int                 @default(100)
+  subscriptionActive   Boolean             @default(false)
+  stripeSubscriptionId String?             @unique
+  stripeAccountId      String?             @unique
+  stripeChargesEnabled Boolean             @default(false)
+  stripePayoutsEnabled Boolean             @default(false)
+  referredById         String?
+  referralPaid         Boolean             @default(false)
+  bookings             Booking[]
+  referredBy           Affiliate?          @relation("TechReferrals", fields: [referredById], references: [id])
+  application          ProviderApplication @relation(fields: [applicationId], references: [id])
+  services             Service[]
+  user                 User?
+}
+
+model Service {
+  id          String           @id @default(cuid())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  providerId  String
+  category    ServiceCategory
+  name        String
+  durationMin Int
+  priceCents  Int
+  active      Boolean          @default(true)
+  bookings    Booking[]
+  questions   IntakeQuestion[]
+  provider    Provider         @relation(fields: [providerId], references: [id])
+}
+
+model IntakeQuestion {
+  id        String         @id @default(cuid())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  serviceId String
+  text      String
+  required  Boolean        @default(true)
+  type      String         @default("TEXT")
+  answers   IntakeAnswer[]
+  service   Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model IntakeAnswer {
+  id         String         @id @default(cuid())
+  createdAt  DateTime       @default(now())
+  bookingId  String
+  questionId String
+  text       String
+  question   IntakeQuestion @relation(fields: [questionId], references: [id])
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  fullName  String
+  phone     String    @unique
+  email     String?
+  bookings  Booking[]
+}
+
+model Booking {
+  id                       String         @id @default(cuid())
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  status                   BookingStatus  @default(PENDING)
+  providerId               String
+  customerId               String
+  serviceId                String
+  startAt                  DateTime
+  notes                    String?
+  isMobile                 Boolean        @default(false)
+  customerZip              String
+  estimatedMiles           Int?
+  servicePriceCents        Int
+  platformFeeCents         Int
+  stripeFeeCents           Int
+  depositCents             Int
+  travelFeeCents           Int
+  totalCents               Int
+  affiliateId              String?
+  affiliateCommissionCents Int            @default(0)
+  providerConfirmedAt      DateTime?
+  customerConfirmedAt      DateTime?
+  completedAt              DateTime?
+  customerConfirmToken     String?        @unique
+  customerCancelToken      String?        @unique
+  paymentId                String?        @unique
+  payment                  Payment?       @relation(fields: [paymentId], references: [id])
+  affiliate                Affiliate?     @relation("BookingReferrals", fields: [affiliateId], references: [id])
+  service                  Service        @relation(fields: [serviceId], references: [id])
+  customer                 Customer       @relation(fields: [customerId], references: [id])
+  provider                 Provider       @relation(fields: [providerId], references: [id])
+  intakeAnswers            IntakeAnswer[]
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  status          PaymentStatus @default(REQUIRES_PAYMENT)
+  amountCents     Int
+  currency        String        @default("USD")
+  provider        String        @default("stripe")
+  paymentIntentId String?
+  latestChargeId  String?
+  booking         Booking?
+}
+
+model Affiliate {
+  id            String     @id @default(cuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  code          String     @unique
+  fullName      String
+  email         String     @unique
+  phone         String?
+  balanceCents  Int        @default(0)
+  bookings      Booking[]  @relation("BookingReferrals")
+  techReferrals Provider[] @relation("TechReferrals")
+  user          User?
+}
+
+model User {
+  id           String               @id @default(cuid())
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  email        String               @unique
+  passwordHash String
+  role         UserRole             @default(CUSTOMER)
+  providerId   String?              @unique
+  affiliateId  String?              @unique
+  resetTokens  PasswordResetToken[]
+  sessions     Session[]
+  affiliate    Affiliate?           @relation(fields: [affiliateId], references: [id])
+  provider     Provider?            @relation(fields: [providerId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  userId    String
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  userId    String
+  token     String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum ServiceCategory {
@@ -25,7 +216,7 @@ enum ApplicationStatus {
 }
 
 enum BookingStatus {
-  PENDING // requested + paid/authorized, awaiting tech approval
+  PENDING
   APPROVED
   DECLINED
   CANCELLED
@@ -41,256 +232,9 @@ enum PaymentStatus {
   VOIDED
 }
 
-model ProviderApplication {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  fullName String
-  phone    String
-  email    String?
-
-  // Collected at application time. Hidden from public.
-  address1 String?
-  address2 String?
-  city     String?
-  state    String?
-  zip      String?
-
-  status ApplicationStatus @default(PENDING)
-  notes  String?
-
-  provider Provider?
-}
-
-model Provider {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  applicationId String              @unique
-  application   ProviderApplication @relation(fields: [applicationId], references: [id])
-
-  // Simple no-login access token for MVP provider dashboard.
-  accessToken String @unique
-
-  displayName String
-  bio         String?
-  instagram   String?
-
-  mode ProviderMode
-
-  // Hidden from public; used for future accurate distance.
-  baseAddress1 String
-  baseAddress2 String?
-  baseCity     String
-  baseState    String
-  baseZip      String
-
-  maxTravelMiles  Int? // only used for MOBILE/BOTH
-  travelRateCents Int  @default(100) // $1 per mile
-
-  // Stripe Connect (Express)
-  stripeAccountId      String? @unique
-  stripeChargesEnabled Boolean @default(false)
-  stripePayoutsEnabled Boolean @default(false)
-
-  services Service[]
-  bookings Booking[]
-
-  user User?
-}
-
-model Service {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  providerId String
-  provider   Provider @relation(fields: [providerId], references: [id])
-
-  category    ServiceCategory
-  name        String
-  durationMin Int
-  priceCents  Int
-  active      Boolean         @default(true)
-
-  bookings  Booking[]
-  questions IntakeQuestion[]
-}
-
-model IntakeQuestion {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  text     String
-  required Boolean @default(true)
-  type     String  @default("TEXT") // TEXT, YES_NO
-
-  answers IntakeAnswer[]
-}
-
-model IntakeAnswer {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  questionId String
-  question   IntakeQuestion @relation(fields: [questionId], references: [id])
-
-  text String
-}
-
-model Customer {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  fullName String
-  phone    String  @unique
-  email    String?
-
-  bookings Booking[]
-}
-
-model Booking {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  status BookingStatus @default(PENDING)
-
-  providerId String
-  provider   Provider @relation(fields: [providerId], references: [id])
-
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
-
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id])
-
-  startAt DateTime
-  notes   String?
-
-  isMobile       Boolean @default(false)
-  customerZip    String
-  estimatedMiles Int? // zip-based estimate
-
-  // money
-  servicePriceCents Int
-  platformFeeCents  Int // 5% of service price
-  depositCents      Int // 20% of total charge (service + travel)
-  travelFeeCents    Int
-  totalCents        Int // service + travel (what customer pays)
-
-  // Affiliate
-  affiliateId String?
-  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
-  affiliateCommissionCents Int @default(0)
-
-  // completion confirmations (both must confirm)
-  providerConfirmedAt DateTime?
-  customerConfirmedAt DateTime?
-  completedAt         DateTime?
-
-  customerConfirmToken String? @unique
-  customerCancelToken  String? @unique
-
-  paymentId String?  @unique
-  payment   Payment? @relation(fields: [paymentId], references: [id])
-
-  intakeAnswers IntakeAnswer[]
-}
-
-model Payment {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  status      PaymentStatus @default(REQUIRES_PAYMENT)
-  amountCents Int
-  currency    String        @default("USD")
-
-  provider String @default("stripe")
-
-  // Stripe refs
-  paymentIntentId String?
-  latestChargeId  String?
-
-  booking Booking?
-}
-
-// ---- Affiliate ----
-
-model Affiliate {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  code      String   @unique
-  fullName  String
-  email     String   @unique
-  phone     String?
-  
-  balanceCents Int @default(0)
-  
-  bookings Booking[]
-  user     User?
-}
-
-// ---- Auth ----
-
 enum UserRole {
   CUSTOMER
   PROVIDER
   ADMIN
   AFFILIATE
-}
-
-model User {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(CUSTOMER)
-
-  providerId String?   @unique
-  provider   Provider? @relation(fields: [providerId], references: [id])
-
-  affiliateId String?   @unique
-  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
-
-  sessions    Session[]
-  resetTokens PasswordResetToken[]
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  token String @unique
-}
-
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
-  expiresAt DateTime
-  usedAt    DateTime?
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  token String @unique
 }

@@ -27,6 +27,8 @@ export function milesBetweenZips(zipA: string, zipB: string): number | null {
 
 export function safeMilesBetweenZips(zipA: string, zipB: string): number {
   const miles = milesBetweenZips(zipA, zipB);
-  // Fallback to a conservative default if zips are unknown.
-  return miles == null ? 10 : miles;
+  if (miles == null) return 10;
+  
+  // Apply a 20% road-buffer to account for driving distance vs. straight line
+  return Math.ceil(miles * 1.2);
 }

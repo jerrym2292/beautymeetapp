@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import AdminClient from "./AdminClient";
 
 export const dynamic = "force-dynamic";
 
