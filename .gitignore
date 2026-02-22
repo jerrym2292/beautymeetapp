@@ -7,3 +7,10 @@ node_modules
 *.db
 
 /generated/prisma
+
+# playwright artifacts
+playwright-report/
+test-results/
+
+# local test cookies
+admin_cookies.txt
