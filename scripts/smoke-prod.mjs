@@ -23,6 +23,17 @@ async function req(path, opts = {}) {
   return { res, text, json, url };
 }
 
+async function waitForServer() {
+  for (let i = 0; i < 60; i++) {
+    try {
+      const r = await fetch(base + '/', { redirect: 'manual' });
+      if (r.status === 200) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error(`Server did not become ready at ${base}`);
+}
+
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
@@ -33,6 +44,7 @@ function rand(n=6){
 
 (async () => {
   console.log('Smoke testing:', base);
+  await waitForServer();
 
   // 1) Public pages
   for (const p of ['/', '/book', '/tech/apply', '/affiliate/register', '/login']) {
