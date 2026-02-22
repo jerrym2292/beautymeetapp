@@ -5,6 +5,8 @@
 
 const base = (process.env.BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const adminPin = process.env.ADMIN_PIN;
+const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+const adminEmail = process.env.ADMIN_BOOTSTRAP_EMAIL;
 
 async function req(path, opts = {}) {
   const url = base + path;
@@ -59,7 +61,9 @@ function rand(n=6){
   console.log('✓ Tech apply submitted');
 
   // 3) Admin approve latest application
+  // Admin endpoints are PIN-gated in the MVP build.
   assert(adminPin, 'ADMIN_PIN must be set in environment to approve applications');
+
   r = await req('/api/admin/applications', {
     headers: { 'x-admin-pin': adminPin },
   });
