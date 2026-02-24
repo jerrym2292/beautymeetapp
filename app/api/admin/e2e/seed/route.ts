@@ -10,8 +10,8 @@ export const runtime = "nodejs";
 // - at least 1 active service
 //
 // Safe to run multiple times.
-export async function POST() {
-  const auth = await requireAdmin();
+export async function POST(req: Request) {
+  const auth = await requireAdmin(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 });
 
   const E2E = {

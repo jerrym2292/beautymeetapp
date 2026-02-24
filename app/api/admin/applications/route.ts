@@ -4,8 +4,8 @@ import { requireAdmin } from "../_auth";
 
 export const runtime = "nodejs";
 
-export async function GET() {
-  const auth = await requireAdmin();
+export async function GET(req: Request) {
+  const auth = await requireAdmin(req);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: 401 });
   }
