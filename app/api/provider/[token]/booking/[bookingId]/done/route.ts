@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { captureFullPaymentForBooking } from "@/lib/payments";
+import { chargeRemainderForBooking } from "@/lib/payments";
 
 export const runtime = "nodejs";
+
+const AUTO_CONFIRM_HOURS = 12;
 
 export async function POST(
   req: Request,
@@ -17,14 +19,17 @@ export async function POST(
   });
   if (!booking) return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
 
+  const now = new Date();
+  const autoChargeAt = new Date(now.getTime() + AUTO_CONFIRM_HOURS * 60 * 60 * 1000);
+
   await prisma.booking.update({
     where: { id: booking.id },
-    data: { providerConfirmedAt: new Date() },
+    data: { providerConfirmedAt: now, autoChargeAt },
   });
 
   const updated = await prisma.booking.findUnique({ where: { id: booking.id } });
-  if (updated?.customerConfirmedAt && !updated.completedAt) {
-    await captureFullPaymentForBooking(updated.id);
+  if (updated?.customerConfirmedAt && !updated.completedAt && !updated.issueReportedAt) {
+    await chargeRemainderForBooking(updated.id).catch(() => null);
   }
 
   return NextResponse.redirect(new URL(`/tech/${token}`, req.url));

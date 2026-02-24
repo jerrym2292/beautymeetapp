@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { captureFullPaymentForBooking } from "@/lib/payments";
+import { chargeRemainderForBooking } from "@/lib/payments";
 
 export const runtime = "nodejs";
 
@@ -21,8 +21,8 @@ export async function POST(
   });
 
   const updated = await prisma.booking.findUnique({ where: { id: booking.id } });
-  if (updated?.providerConfirmedAt && !updated.completedAt) {
-    await captureFullPaymentForBooking(updated.id);
+  if (updated?.providerConfirmedAt && !updated.completedAt && !updated.issueReportedAt) {
+    await chargeRemainderForBooking(updated.id).catch(() => null);
   }
 
   return NextResponse.json({ ok: true });

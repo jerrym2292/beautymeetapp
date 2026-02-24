@@ -123,13 +123,23 @@ model Booking {
   totalCents               Int
   affiliateId              String?
   affiliateCommissionCents Int            @default(0)
+
+  // Completion + charging
   providerConfirmedAt      DateTime?
   customerConfirmedAt      DateTime?
+  autoChargeAt             DateTime?
+  issueReportedAt          DateTime?
   completedAt              DateTime?
+
   customerConfirmToken     String?        @unique
   customerCancelToken      String?        @unique
-  paymentId                String?        @unique
-  payment                  Payment?       @relation(fields: [paymentId], references: [id])
+  customerIssueToken       String?        @unique
+
+  stripeCustomerId         String?
+  stripePaymentMethodId    String?
+
+  payments                 Payment[]
+
   affiliate                Affiliate?     @relation("BookingReferrals", fields: [affiliateId], references: [id])
   service                  Service        @relation(fields: [serviceId], references: [id])
   customer                 Customer       @relation(fields: [customerId], references: [id])
@@ -142,12 +152,24 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   status          PaymentStatus @default(REQUIRES_PAYMENT)
+  type            PaymentType
   amountCents     Int
   currency        String        @default("USD")
   provider        String        @default("stripe")
   paymentIntentId String?
   latestChargeId  String?
-  booking         Booking?
+
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([paymentIntentId])
+}
+
+model StripeWebhookEvent {
+  id        String   @id // Stripe event id
+  createdAt DateTime @default(now())
+  type      String
 }
 
 model Affiliate {
@@ -230,6 +252,11 @@ enum PaymentStatus {
   CAPTURED
   REFUNDED
   VOIDED
+}
+
+enum PaymentType {
+  DEPOSIT
+  REMAINDER
 }
 
 enum UserRole {

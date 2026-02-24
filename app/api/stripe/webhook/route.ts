@@ -19,19 +19,59 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret);
   } catch (err: any) {
-    return NextResponse.json({ error: `Webhook signature verification failed: ${err?.message || err}` }, { status: 400 });
+    return NextResponse.json(
+      { error: `Webhook signature verification failed: ${err?.message || err}` },
+      { status: 400 }
+    );
+  }
+
+  // Idempotency: Stripe retries webhooks.
+  try {
+    await prisma.stripeWebhookEvent.create({
+      data: { id: event.id, type: event.type },
+    });
+  } catch {
+    // already processed
+    return NextResponse.json({ received: true });
   }
 
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as any;
-      const bookingId = session?.metadata?.bookingId;
+      const bookingId = session?.metadata?.bookingId as string | undefined;
+      const paymentId = session?.metadata?.paymentId as string | undefined;
       const paymentIntentId = session?.payment_intent as string | undefined;
+      const stripeCustomerId = session?.customer as string | undefined;
+
       if (bookingId && paymentIntentId) {
-        await prisma.payment.updateMany({
-          where: { booking: { id: bookingId } },
-          data: { status: "AUTHORIZED", paymentIntentId },
-        });
+        // Mark the deposit payment captured.
+        if (paymentId) {
+          await prisma.payment.updateMany({
+            where: { id: paymentId, bookingId },
+            data: { status: "CAPTURED", paymentIntentId },
+          });
+        } else {
+          await prisma.payment.updateMany({
+            where: { bookingId, type: "DEPOSIT" },
+            data: { status: "CAPTURED", paymentIntentId },
+          });
+        }
+
+        // Save payment method for off-session remainder charge.
+        // Need to fetch PI to get payment_method.
+        try {
+          const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+          const pm = (pi as any)?.payment_method as string | null | undefined;
+          await prisma.booking.updateMany({
+            where: { id: bookingId },
+            data: {
+              stripeCustomerId: stripeCustomerId || null,
+              stripePaymentMethodId: pm || null,
+            },
+          });
+        } catch {
+          // non-fatal
+        }
       }
       break;
     }
@@ -50,7 +90,6 @@ export async function POST(req: Request) {
     }
 
     case "payment_intent.succeeded": {
-      // When we capture later, the PI will succeed.
       const pi = event.data.object as any;
       const id = pi.id as string;
       await prisma.payment.updateMany({

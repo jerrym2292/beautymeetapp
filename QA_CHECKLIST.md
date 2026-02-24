@@ -99,3 +99,26 @@ This checklist is meant to be run:
 - [ ] Twilio is optional or installed (build should not fail)
 - [ ] Rate limiting / abuse protection on application endpoints
 - [ ] No PII leaks on public pages
+
+---
+
+## Stripe readiness checklist (before switching to LIVE)
+- [ ] STRIPE_SECRET_KEY is correct (no placeholders), and matches intended mode (test vs live)
+- [ ] STRIPE_WEBHOOK_SECRET configured in prod
+- [ ] Webhook endpoint verifies signature and is **idempotent** (dedupe Stripe event IDs)
+- [ ] Checkout sessions include `setup_future_usage=off_session` so remainder can be charged
+- [ ] Deposit-only policy confirmed (25% deposit) + customer messaging updated
+- [ ] Remainder charge flow:
+  - [ ] Saved customer + payment method stored after deposit payment
+  - [ ] Tech marks complete + customer confirm works
+  - [ ] Auto-charge remainder after 12h if no issue reported
+  - [ ] If issue reported → remainder charge paused + support notified
+- [ ] Refund paths tested:
+  - [ ] Customer cancel early → deposit refunded
+  - [ ] Late cancel/no-show → deposit retained
+  - [ ] Tech cancel/decline → deposit refunded
+- [ ] Stripe Connect tested (if using destination charges):
+  - [ ] Connected account onboarding works
+  - [ ] Destination charges succeed
+  - [ ] Application fees match policy
+- [ ] Admin visibility: can inspect a booking + its payments + Stripe ids
