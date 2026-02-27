@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
   // For MVP: brute force filter in-memory.
   const providers = await prisma.provider.findMany({
-    where: { active: true },
+    where: { active: true, subscriptionActive: true },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

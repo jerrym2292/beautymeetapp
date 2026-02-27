@@ -57,7 +57,8 @@ export async function POST(req: Request) {
         baseZip,
         maxTravelMiles: 25,
         travelRateCents: 100,
-        // default to visible
+        // default to subscribed + visible
+        subscriptionActive: true,
         active: true,
       },
       select: { id: true, accessToken: true, displayName: true },

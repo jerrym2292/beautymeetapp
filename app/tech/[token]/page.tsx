@@ -78,6 +78,40 @@ export default async function TechDashboard({
       </section>
 
       <section style={card}>
+        <div style={{ fontWeight: 800 }}>Subscription</div>
+        <div style={{ opacity: 0.8, marginTop: 6, fontSize: 13, lineHeight: 1.35 }}>
+          Status: {provider.subscriptionActive ? (
+            <b style={{ color: "#4ade80" }}>Subscribed (visible to customers)</b>
+          ) : (
+            <b style={{ color: "#f87171" }}>Unsubscribed (hidden)</b>
+          )}
+        </div>
+
+        {provider.subscriptionActive ? (
+          <ConfirmForm
+            action={`/api/provider/${provider.accessToken}/subscription`}
+            method="post"
+            confirmText="Are you sure you want to unsubscribe? Your profile will become invisible to customers and you will stop receiving new bookings."
+            style={{ marginTop: 10 }}
+          >
+            <input type="hidden" name="action" value="unsubscribe" />
+            <button style={{ ...btn, borderColor: "rgba(248,113,113,0.5)", background: "rgba(248,113,113,0.12)" }} type="submit">
+              Unsubscribe (hide my profile)
+            </button>
+          </ConfirmForm>
+        ) : (
+          <form action={`/api/provider/${provider.accessToken}/subscription`} method="post" style={{ marginTop: 10 }}>
+            <input type="hidden" name="action" value="subscribe" />
+            <button style={btn} type="submit">Subscribe (make me visible)</button>
+          </form>
+        )}
+
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+          Note: Stripe billing hookup can be added next. For now, this just controls visibility.
+        </div>
+      </section>
+
+      <section style={card}>
         <div style={{ fontWeight: 800 }}>Payments (Stripe)</div>
         <div style={{ opacity: 0.8, marginTop: 6, fontSize: 13, lineHeight: 1.35 }}>
           Status: {provider.stripeAccountId ? (
