@@ -85,7 +85,7 @@ function rand(n=6){
     r = await req('/api/admin/approve', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-admin-pin': adminPin },
-      body: JSON.stringify({ id: appId }),
+      body: JSON.stringify({ appId, displayName: `Smoke Tech ${rand(4)}`, baseZip: '15001' }),
     });
     assert(r.res.ok, `POST /api/admin/approve failed ${r.res.status} ${r.text.slice(0,200)}`);
     const token = r.json?.provider?.accessToken;
