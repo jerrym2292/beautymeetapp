@@ -13,14 +13,18 @@ type IntakeQuestion = {
 type Provider = {
   id: string;
   displayName: string;
+  bio: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  tiktok: string | null;
   mode: "FIXED" | "MOBILE" | "BOTH";
   maxTravelMiles: number | null;
   travelRateCents: number;
-  services: { 
-    id: string; 
-    name: string; 
-    durationMin: number; 
-    priceCents: number; 
+  services: {
+    id: string;
+    name: string;
+    durationMin: number;
+    priceCents: number;
     category: string;
     questions: IntakeQuestion[];
   }[];
@@ -125,6 +129,35 @@ export default function ProviderBookingPage({
           <div style={{ opacity: 0.8, marginTop: 4 }}>
             {provider.mode}{provider.maxTravelMiles ? ` • Mobile up to ${provider.maxTravelMiles} miles` : ""}
           </div>
+
+          {(provider.bio || provider.instagram || provider.facebook || provider.tiktok) ? (
+            <section style={{ marginTop: 14, ...card }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>About</div>
+              {provider.bio ? (
+                <div style={{ opacity: 0.85, fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                  {provider.bio}
+                </div>
+              ) : null}
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                {provider.instagram ? (
+                  <a href={normalizeUrl(provider.instagram)} target="_blank" rel="noreferrer" style={socialLink}>
+                    Instagram
+                  </a>
+                ) : null}
+                {provider.facebook ? (
+                  <a href={normalizeUrl(provider.facebook)} target="_blank" rel="noreferrer" style={socialLink}>
+                    Facebook
+                  </a>
+                ) : null}
+                {provider.tiktok ? (
+                  <a href={normalizeUrl(provider.tiktok)} target="_blank" rel="noreferrer" style={socialLink}>
+                    TikTok
+                  </a>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
 
           {submitStatus === 'success' ? (
             <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)" }}>
@@ -245,6 +278,33 @@ const input: React.CSSProperties = {
   color: "#f5f5f7",
   outline: "none",
 };
+
+const card: React.CSSProperties = {
+  padding: 14,
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.10)",
+  background: "rgba(255,255,255,0.04)",
+};
+
+const socialLink: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 10,
+  border: "1px solid rgba(212,175,55,0.35)",
+  background: "rgba(212,175,55,0.12)",
+  color: "#D4AF37",
+  textDecoration: "none",
+  fontWeight: 800,
+  fontSize: 13,
+};
+
+function normalizeUrl(v: string) {
+  const s = (v || "").trim();
+  if (!s) return s;
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  // If they paste a handle like @name, strip @ and treat as https.
+  const cleaned = s.startsWith("@");
+  return `https://${(cleaned ? s.slice(1) : s)}`;
+}
 
 const btn: React.CSSProperties = {
   padding: "10px 12px",

@@ -156,6 +156,41 @@ export default async function TechDashboard({
       </section>
 
       <section style={card}>
+        <div style={{ fontWeight: 800 }}>Public Profile</div>
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+          These links show on your public booking page.
+        </div>
+
+        <form action={`/api/provider/${provider.accessToken}/profile`} method="post" style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          <textarea
+            name="bio"
+            defaultValue={provider.bio || ""}
+            placeholder="Short bio (optional)"
+            style={{ ...input, minHeight: 90 }}
+          />
+          <input
+            name="instagram"
+            defaultValue={(provider as any).instagram || ""}
+            placeholder="Instagram link (optional)"
+            style={input}
+          />
+          <input
+            name="facebook"
+            defaultValue={(provider as any).facebook || ""}
+            placeholder="Facebook link (optional)"
+            style={input}
+          />
+          <input
+            name="tiktok"
+            defaultValue={(provider as any).tiktok || ""}
+            placeholder="TikTok link (optional)"
+            style={input}
+          />
+          <button style={btn} type="submit">Save profile</button>
+        </form>
+      </section>
+
+      <section style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
           <div>
             <div style={{ fontWeight: 800 }}>Services</div>

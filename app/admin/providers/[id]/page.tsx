@@ -140,6 +140,19 @@ export default async function AdminProviderDetailPage({
               /p/{provider.id}
             </a>
           </div>
+
+          <div style={{ marginTop: 10 }}>
+            <b>Socials:</b>
+            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+              IG: {(provider as any).instagram || "—"}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              FB: {(provider as any).facebook || "—"}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              TikTok: {(provider as any).tiktok || "—"}
+            </div>
+          </div>
         </div>
       </section>
 

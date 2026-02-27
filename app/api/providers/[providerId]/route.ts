@@ -11,6 +11,10 @@ export async function GET(
     select: {
       id: true,
       displayName: true,
+      bio: true,
+      instagram: true,
+      facebook: true,
+      tiktok: true,
       mode: true,
       maxTravelMiles: true,
       travelRateCents: true,
