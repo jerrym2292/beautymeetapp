@@ -73,6 +73,13 @@ export default async function AdminPage() {
           </div>
         </Link>
 
+        <Link href="/admin/bookings" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Bookings Ops</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Search, reschedule, cancel, no-show, issues, and charging.
+          </div>
+        </Link>
+
         <Link href="/admin/refunds" style={adminCard}>
           <div style={{ fontWeight: 800, fontSize: 18 }}>Refunds</div>
           <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
