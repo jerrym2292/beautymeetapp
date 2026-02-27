@@ -36,7 +36,8 @@ export async function POST(req: Request) {
       fullName,
       email: lowerEmail,
       code: upperCode,
-    }
+    },
+    select: { id: true, code: true },
   });
 
   await prisma.user.create({
@@ -44,9 +45,9 @@ export async function POST(req: Request) {
       email: lowerEmail,
       passwordHash,
       role: "AFFILIATE",
-      affiliateId: affiliate.id
-    }
+      affiliateId: affiliate.id,
+    },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, affiliate });
 }
