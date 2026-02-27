@@ -25,6 +25,7 @@ export default async function CustomerDashboardPage() {
         include: {
           provider: true,
           service: true,
+          payments: { orderBy: { createdAt: "desc" } },
         },
       },
     },
@@ -77,7 +78,7 @@ export default async function CustomerDashboardPage() {
       </section>
 
       <section style={section}>
-        <h2 style={sectionTitle}>Your Appointments</h2>
+        <h2 style={sectionTitle}>Your Service History</h2>
         {customer.bookings.length === 0 ? (
           <div style={emptyState}>
             <p>You haven't booked anything yet.</p>
@@ -106,6 +107,60 @@ export default async function CustomerDashboardPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section style={section}>
+        <h2 style={sectionTitle}>Payment History</h2>
+        <div style={refBox}>
+          {customer.bookings.flatMap((b) =>
+            (b.payments || []).map((p) => ({
+              id: p.id,
+              bookingId: b.id,
+              createdAt: p.createdAt,
+              type: p.type,
+              status: p.status,
+              amountCents: p.amountCents,
+              providerName: b.provider.displayName,
+              serviceName: b.service.name,
+            }))
+          ).length === 0 ? (
+            <div style={{ opacity: 0.75 }}>No payments yet.</div>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {customer.bookings
+                .flatMap((b) =>
+                  (b.payments || []).map((p) => ({
+                    id: p.id,
+                    bookingId: b.id,
+                    createdAt: p.createdAt,
+                    type: p.type,
+                    status: p.status,
+                    amountCents: p.amountCents,
+                    providerName: b.provider.displayName,
+                    serviceName: b.service.name,
+                  }))
+                )
+                .sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1))
+                .slice(0, 50)
+                .map((p) => (
+                  <div key={p.id} style={{ ...bookingCard, margin: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 800 }}>{p.type} • {p.status}</div>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
+                          {p.providerName} — {p.serviceName}
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
+                          {new Date(p.createdAt).toLocaleString()} • Booking {p.bookingId}
+                        </div>
+                      </div>
+                      <div style={{ fontWeight: 900 }}>${(p.amountCents / 100).toFixed(2)}</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section style={profileSection}>

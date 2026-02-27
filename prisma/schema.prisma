@@ -183,6 +183,7 @@ model Payment {
   provider        String        @default("stripe")
   paymentIntentId String?
   latestChargeId  String?
+  receiptSmsSentAt DateTime?
 
   bookingId String @default("LEGACY")
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)

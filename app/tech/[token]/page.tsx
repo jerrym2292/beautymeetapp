@@ -22,7 +22,12 @@ export default async function TechDashboard({
       },
       bookings: {
         orderBy: { createdAt: "desc" },
-        include: { customer: true, service: true, intakeAnswers: { include: { question: true } } },
+        include: {
+          customer: true,
+          service: true,
+          payments: { orderBy: { createdAt: "desc" } },
+          intakeAnswers: { include: { question: true } },
+        },
         take: 25,
       },
     },

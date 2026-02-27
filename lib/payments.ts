@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
 import { requestTechReviewBySMS } from "@/lib/reviews";
+import { sendPaymentReceiptSMS } from "@/lib/receipts";
 
 function cents(n: number) {
   return Math.max(0, Math.round(n));
@@ -154,6 +155,21 @@ export async function chargeRemainderForBooking(bookingId: string) {
   });
 
   if (pi.status === "succeeded") {
+    // Send receipt SMS once
+    const claimed = await prisma.payment.updateMany({
+      where: { id: remainderPayment.id, receiptSmsSentAt: null },
+      data: { receiptSmsSentAt: new Date() },
+    });
+    if (claimed.count > 0) {
+      await sendPaymentReceiptSMS({
+        to: b.customer.phone,
+        amountCents: remainderTotalCents,
+        kind: "Remainder",
+        bookingId: b.id,
+        providerName: b.provider.displayName,
+      }).catch(() => null);
+    }
+
     await markCompletedAndMaybeReward(new Date());
   }
 }

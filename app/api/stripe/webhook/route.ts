@@ -74,6 +74,33 @@ export async function POST(req: Request) {
           // non-fatal
         }
 
+        // Receipt SMS (once)
+        try {
+          const booking = await prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: { customer: true, provider: true, payments: true },
+          });
+          const deposit = booking?.payments?.find((p) => p.type === "DEPOSIT");
+          if (booking?.customer?.phone && deposit) {
+            const claimed = await prisma.payment.updateMany({
+              where: { id: deposit.id, receiptSmsSentAt: null },
+              data: { receiptSmsSentAt: new Date() },
+            });
+            if (claimed.count > 0) {
+              const { sendPaymentReceiptSMS } = await import("@/lib/receipts");
+              await sendPaymentReceiptSMS({
+                to: booking.customer.phone,
+                amountCents: deposit.amountCents,
+                kind: "Deposit",
+                bookingId: booking.id,
+                providerName: booking.provider?.displayName,
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         break;
       }
 
