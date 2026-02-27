@@ -11,7 +11,7 @@ export async function POST(
 ) {
   const { token } = await params;
 
-  const provider = await prisma.provider.findUnique({ where: { accessToken: token } });
+  const provider = await prisma.provider.findUnique({ where: { accessToken: token }, include: { application: true } });
   if (!provider) return NextResponse.redirect(new URL(`/`, req.url));
 
   const priceId = process.env.STRIPE_TECH_SUB_PRICE_ID;
@@ -28,8 +28,15 @@ export async function POST(
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${baseUrl}/tech/${token}?sub=success`,
     cancel_url: `${baseUrl}/tech/${token}?sub=cancel`,
-    customer: provider.stripeCustomerId || undefined,
-    customer_creation: provider.stripeCustomerId ? undefined : "always",
+    ...(provider.stripeCustomerId
+      ? { customer: provider.stripeCustomerId }
+      : { customer_email: provider.application?.email || undefined }),
+    subscription_data: {
+      metadata: {
+        kind: "tech_subscription",
+        providerId: provider.id,
+      },
+    },
     metadata: {
       kind: "tech_subscription",
       providerId: provider.id,
