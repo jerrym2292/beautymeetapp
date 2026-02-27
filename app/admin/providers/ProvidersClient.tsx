@@ -52,7 +52,10 @@ export default function ProvidersClient() {
     });
   }, [providers, filter]);
 
-  async function toggleActive(providerId: string, current: boolean) {
+  async function toggleActive(providerId: string, current: boolean, displayName: string) {
+    const verb = current ? "HIDE" : "MAKE VISIBLE";
+    if (!confirm(`Are you sure you want to ${verb} ${displayName}?`)) return;
+
     const res = await fetch(`/api/admin/providers/${providerId}/toggle`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -162,7 +165,7 @@ export default function ProvidersClient() {
 
               <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                 <button
-                  onClick={() => toggleActive(p.id, p.active)}
+                  onClick={() => toggleActive(p.id, p.active, p.displayName)}
                   style={{ ...buttonStyle, flex: 1, minWidth: 180 }}
                 >
                   {p.active ? "Hide Profile" : "Make Visible"}
