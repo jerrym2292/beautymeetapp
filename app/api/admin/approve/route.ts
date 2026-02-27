@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     prisma.providerApplication.update({
       where: { id: appId },
       data: { status: "APPROVED" },
+      select: { id: true },
     }),
     prisma.provider.create({
       data: {
@@ -56,7 +57,10 @@ export async function POST(req: Request) {
         baseZip,
         maxTravelMiles: 25,
         travelRateCents: 100,
+        // default to visible
+        active: true,
       },
+      select: { id: true, accessToken: true, displayName: true },
     }),
   ];
 
@@ -74,9 +78,10 @@ export async function POST(req: Request) {
     );
   }
 
-  await prisma.$transaction(tx);
+  const results = await prisma.$transaction(tx);
+  const provider = results[1];
 
   // TODO: send SMS to provider: approved
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, provider });
 }
