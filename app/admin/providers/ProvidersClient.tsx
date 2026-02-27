@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import CreateProviderForm from "./CreateProviderForm";
 
 type ProviderRow = {
   id: string;
@@ -22,6 +23,7 @@ export default function ProvidersClient() {
   const [providers, setProviders] = useState<ProviderRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
 
   async function load() {
     setLoading(true);
@@ -41,6 +43,15 @@ export default function ProvidersClient() {
     load();
   }, []);
 
+  const filtered = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    if (!f) return providers;
+    return providers.filter((p) => {
+      const hay = `${p.displayName} ${p.application.fullName} ${p.application.phone} ${p.application.email || ""} ${p.id}`.toLowerCase();
+      return hay.includes(f);
+    });
+  }, [providers, filter]);
+
   async function toggleActive(providerId: string, current: boolean) {
     const res = await fetch(`/api/admin/providers/${providerId}/toggle`, {
       method: "POST",
@@ -55,6 +66,21 @@ export default function ProvidersClient() {
     await load();
   }
 
+  async function removeProvider(providerId: string, displayName: string) {
+    if (!confirm(`Are you sure you want to REMOVE ${displayName}?\n\nThis will permanently delete the provider ONLY if they have no bookings. Otherwise it will fail and you should hide them instead.`)) {
+      return;
+    }
+
+    const res = await fetch(`/api/admin/providers/${providerId}`, { method: "DELETE" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(j?.error || "Remove failed");
+      return;
+    }
+
+    await load();
+  }
+
   return (
     <main>
       <Link href="/admin" style={{ color: "#D4AF37" }}>
@@ -62,8 +88,10 @@ export default function ProvidersClient() {
       </Link>
       <h1 style={{ marginTop: 12 }}>Manage Providers</h1>
 
+      <CreateProviderForm onCreated={load} />
+
       <section style={card}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <button
             disabled={loading}
             onClick={load}
@@ -71,15 +99,21 @@ export default function ProvidersClient() {
           >
             {loading ? "Loading…" : "Refresh"}
           </button>
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter providers…"
+            style={{ ...inputStyle, flex: 1, minWidth: 220 }}
+          />
           <div style={{ fontSize: 12, opacity: 0.7 }}>
-            Toggle technician visibility (hide/disable only).
+            Hide/disable, or remove (only if no bookings).
           </div>
         </div>
 
         {err ? <div style={{ color: "#fecaca", marginTop: 10 }}>{err}</div> : null}
 
         <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-          {providers.map((p) => (
+          {filtered.map((p) => (
             <div
               key={p.id}
               style={{ ...card, marginTop: 0, opacity: p.active ? 1 : 0.6 }}
@@ -126,20 +160,33 @@ export default function ProvidersClient() {
                   : "❌ Not connected"}
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                 <button
                   onClick={() => toggleActive(p.id, p.active)}
-                  style={{ ...buttonStyle, flex: 1 }}
+                  style={{ ...buttonStyle, flex: 1, minWidth: 180 }}
                 >
                   {p.active ? "Hide Profile" : "Make Visible"}
+                </button>
+
+                <button
+                  onClick={() => removeProvider(p.id, p.displayName)}
+                  style={{
+                    ...buttonStyle,
+                    flex: 1,
+                    minWidth: 180,
+                    borderColor: "rgba(248,113,113,0.5)",
+                    background: "rgba(248,113,113,0.12)",
+                  }}
+                >
+                  Remove
                 </button>
               </div>
             </div>
           ))}
 
-          {providers.length === 0 && !loading ? (
+          {filtered.length === 0 && !loading ? (
             <div style={{ opacity: 0.8, marginTop: 8 }}>
-              No approved providers yet.
+              No providers match.
             </div>
           ) : null}
         </div>
@@ -153,6 +200,15 @@ const card: React.CSSProperties = {
   borderRadius: 14,
   border: "1px solid rgba(255,255,255,0.10)",
   background: "rgba(255,255,255,0.04)",
+};
+
+const inputStyle: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#f5f5f7",
+  outline: "none",
 };
 
 const buttonStyle: React.CSSProperties = {

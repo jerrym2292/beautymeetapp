@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import IntakeFormManager from "./IntakeFormManager";
 import ModeToggle from "./ModeToggle";
+import ConfirmForm from "./ConfirmForm";
 
 export const dynamic = "force-dynamic";
 
@@ -215,11 +216,23 @@ export default async function TechDashboard({
                       Approve
                     </button>
                   </form>
-                  <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/decline`} method="post" style={{ flex:  1 }}>
-                    <button style={{ ...btn, borderColor: "rgba(248,113,113,0.5)", background: "rgba(248,113,113,0.12)" }} type="submit">
+                  <ConfirmForm
+                    action={`/api/provider/${provider.accessToken}/booking/${b.id}/decline`}
+                    method="post"
+                    confirmText="Are you sure you want to decline this customer? This will cancel the booking and refund the deposit."
+                    style={{ flex: 1 }}
+                  >
+                    <button
+                      style={{
+                        ...btn,
+                        borderColor: "rgba(248,113,113,0.5)",
+                        background: "rgba(248,113,113,0.12)",
+                      }}
+                      type="submit"
+                    >
                       Decline
                     </button>
-                  </form>
+                  </ConfirmForm>
                 </div>
               ) : null}
 

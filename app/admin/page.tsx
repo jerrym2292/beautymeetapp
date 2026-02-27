@@ -59,10 +59,17 @@ export default async function AdminPage() {
           </div>
         </Link>
 
+        <Link href="/admin/search" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Search</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Look up customers, techs, and bookings.
+          </div>
+        </Link>
+
         <Link href="/admin/providers" style={adminCard}>
           <div style={{ fontWeight: 800, fontSize: 18 }}>Providers</div>
           <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
-            Hide/disable technician profiles.
+            Add, hide/disable, or remove technician accounts.
           </div>
         </Link>
 
