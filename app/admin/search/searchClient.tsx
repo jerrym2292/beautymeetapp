@@ -96,7 +96,17 @@ export default function SearchClient() {
         <div style={{ fontWeight: 900 }}>Providers</div>
         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
           {providers.map((p) => (
-            <div key={p.id} style={{ ...miniCard, opacity: p.active ? 1 : 0.6 }}>
+            <Link
+              key={p.id}
+              href={`/admin/providers/${p.id}`}
+              style={{
+                ...miniCard,
+                opacity: p.active ? 1 : 0.6,
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                 <div>
                   <div style={{ fontWeight: 800 }}>{p.displayName}</div>
@@ -109,17 +119,12 @@ export default function SearchClient() {
                   <div style={{ fontSize: 10, opacity: 0.8 }}>
                     {p.active ? "ACTIVE" : "HIDDEN"}
                   </div>
-                  <a
-                    href={`/p/${p.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: "#D4AF37", fontSize: 12 }}
-                  >
-                    View public page
-                  </a>
+                  <span style={{ color: "#D4AF37", fontSize: 12 }}>
+                    Open provider details →
+                  </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
           {providers.length === 0 ? <div style={{ opacity: 0.75 }}>No providers found.</div> : null}
         </div>
@@ -129,7 +134,16 @@ export default function SearchClient() {
         <div style={{ fontWeight: 900 }}>Customers</div>
         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
           {customers.map((c) => (
-            <div key={c.id} style={miniCard}>
+            <Link
+              key={c.id}
+              href={`/admin/customers/${c.id}`}
+              style={{
+                ...miniCard,
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+              }}
+            >
               <div style={{ fontWeight: 800 }}>{c.fullName}</div>
               <div style={{ fontSize: 12, opacity: 0.75 }}>
                 {c.phone}{c.email ? ` • ${c.email}` : ""}
@@ -137,7 +151,10 @@ export default function SearchClient() {
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 ID: {c.id} • Created: {new Date(c.createdAt).toLocaleString()}
               </div>
-            </div>
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+                Open customer details →
+              </div>
+            </Link>
           ))}
           {customers.length === 0 ? <div style={{ opacity: 0.75 }}>No customers found.</div> : null}
         </div>
