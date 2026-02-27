@@ -41,7 +41,7 @@ export default function CancelBookingPage({
       </Link>
       <h1 style={{ marginTop: 12 }}>Cancel booking</h1>
       <p style={{ opacity: 0.85, marginTop: 10 }}>
-        Cancelling within 3 hours keeps the 20% security deposit.
+        Cancelling within 3 hours keeps the 25% security deposit.
       </p>
 
       {status === "done" ? (

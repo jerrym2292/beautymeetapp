@@ -29,10 +29,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
-  await prisma.providerApplication.update({
-    where: { id: appId },
-    data: { status: "REJECTED", notes: notes ?? null },
-  });
+  const tx: any[] = [
+    prisma.providerApplication.update({
+      where: { id: appId },
+      data: { status: "REJECTED", notes: notes ?? null },
+    }),
+  ];
+
+  // Admin PIN auth (no session user) is allowed for smoke/E2E; skip audit log in that case.
+  if (auth.user) {
+    tx.push(
+      prisma.adminAuditLog.create({
+        data: {
+          adminId: auth.user.id,
+          action: "REJECT_PROVIDER",
+          targetId: appId,
+          details: JSON.stringify({ notes }),
+        },
+      })
+    );
+  }
+
+  await prisma.$transaction(tx);
 
   // TODO: send SMS to provider: rejected
 

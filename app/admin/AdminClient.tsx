@@ -9,6 +9,11 @@ type AppRow = {
   fullName: string;
   phone: string;
   email: string | null;
+  dob: string | null;
+  licenseNumber: string | null;
+  licenseState: string | null;
+  licenseUrl: string | null;
+  idUrl: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
 };
 
@@ -97,9 +102,35 @@ export default function AdminClient() {
               <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
                 {a.phone} {a.email ? `• ${a.email}` : ""}
               </div>
+              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                DOB: {a.dob ? new Date(a.dob).toLocaleDateString() : "N/A"}
+              </div>
+              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                License: <b>{a.licenseNumber || "N/A"}</b> ({a.licenseState || "N/A"})
+              </div>
               <div style={{ opacity: 0.7, fontSize: 12, marginTop: 4 }}>
                 Submitted: {new Date(a.createdAt).toLocaleString()}
               </div>
+
+              {(a.licenseUrl || a.idUrl) ? (
+                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                  {a.licenseUrl ? (
+                    <a href={a.licenseUrl} target="_blank" rel="noreferrer" style={{ color: "#D4AF37", fontSize: 13 }}>
+                      View license upload
+                    </a>
+                  ) : null}
+                  {a.idUrl ? (
+                    <a href={a.idUrl} target="_blank" rel="noreferrer" style={{ color: "#D4AF37", fontSize: 13 }}>
+                      View ID upload
+                    </a>
+                  ) : null}
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.65 }}>
+                  No uploads yet.
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
                 <button onClick={() => approve(a.id)} style={{ ...buttonStyle, flex: 1 }}>
                   Approve

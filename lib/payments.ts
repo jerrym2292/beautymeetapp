@@ -15,48 +15,70 @@ export async function chargeRemainderForBooking(bookingId: string) {
     where: { id: bookingId },
     include: {
       provider: true,
+      customer: true,
       payments: true,
     },
   });
   if (!booking) throw new Error("Booking not found");
-  if (booking.completedAt) return;
-  if (booking.issueReportedAt) throw new Error("Issue reported; remainder charge paused");
+  const b = booking; // help TS narrow
+  if (b.completedAt) return;
+  if (b.issueReportedAt) throw new Error("Issue reported; remainder charge paused");
 
-  const depositPayment = booking.payments.find((p) => p.type === "DEPOSIT");
+  const depositPayment = b.payments.find((p) => p.type === "DEPOSIT");
   if (!depositPayment || depositPayment.status !== "CAPTURED") {
     throw new Error("Deposit not captured");
   }
 
-  const subtotalCents = booking.servicePriceCents + booking.travelFeeCents;
+  const subtotalCents = b.servicePriceCents + b.travelFeeCents;
 
   // Deposit base is (deposit - its processing fee). We recompute remaining from policy:
   // remainder base = subtotal - depositBase
-  // Since booking.depositCents includes processing fee, estimate deposit base = deposit / 1.03.
-  const depositBaseApprox = cents(booking.depositCents / 1.03);
+  // Since b.depositCents includes processing fee, estimate deposit base = deposit / 1.03.
+  const depositBaseApprox = cents(b.depositCents / 1.03);
   const remainingBaseCents = Math.max(0, subtotalCents - depositBaseApprox);
   const remainderStripeFeeCents = cents(remainingBaseCents * 0.03);
   const remainderTotalCents = remainingBaseCents + remainderStripeFeeCents;
 
   // Already charged?
-  const existingRemainder = booking.payments.find((p) => p.type === "REMAINDER");
+  const existingRemainder = b.payments.find((p) => p.type === "REMAINDER");
+  async function markCompletedAndMaybeReward(ts: Date) {
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: b.id },
+        data: { status: "COMPLETED", completedAt: ts },
+      });
+
+      const c = b.customer;
+      if (c?.referredByCustomerId && !c.referralRewardGranted) {
+        const completedCount = await tx.booking.count({
+          where: { customerId: c.id, status: "COMPLETED" },
+        });
+        if (completedCount === 1) {
+          await tx.customer.update({
+            where: { id: c.id },
+            data: { referralRewardGranted: true },
+          });
+          await tx.customer.updateMany({
+            where: { id: c.referredByCustomerId, nextBookingDiscountPct: 0 },
+            data: { nextBookingDiscountPct: 10 },
+          });
+        }
+      }
+    });
+  }
+
   if (existingRemainder && existingRemainder.status === "CAPTURED") {
     // Mark completed (safety)
-    await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status: "COMPLETED", completedAt: booking.completedAt ?? new Date() },
-    });
+    await markCompletedAndMaybeReward(b.completedAt ?? new Date());
     return;
   }
 
   if (remainderTotalCents <= 0) {
-    await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
+    await markCompletedAndMaybeReward(new Date());
     return;
   }
 
-  if (!booking.stripeCustomerId || !booking.stripePaymentMethodId) {
+  if (!b.stripeCustomerId || !b.stripePaymentMethodId) {
     throw new Error("Missing saved payment method");
   }
 
@@ -67,7 +89,7 @@ export async function chargeRemainderForBooking(bookingId: string) {
     existingRemainder ||
     (await prisma.payment.create({
       data: {
-        bookingId: booking.id,
+        bookingId: b.id,
         type: "REMAINDER",
         status: "REQUIRES_PAYMENT",
         amountCents: remainderTotalCents,
@@ -76,32 +98,32 @@ export async function chargeRemainderForBooking(bookingId: string) {
       },
     }));
 
-  const connectPayoutEnabled = !!booking.provider.stripeAccountId;
+  const connectPayoutEnabled = !!b.provider.stripeAccountId;
 
   const applicationFeeCents = cents(
-    booking.platformFeeCents + booking.affiliateCommissionCents -
+    b.platformFeeCents + b.affiliateCommissionCents -
       // subtract any platform fee already taken on the deposit (approx proportional)
-      (booking.platformFeeCents + booking.affiliateCommissionCents) * 0.25
+      (b.platformFeeCents + b.affiliateCommissionCents) * 0.25
   );
 
   const params: any = {
     amount: remainderTotalCents,
     currency: "usd",
-    customer: booking.stripeCustomerId,
-    payment_method: booking.stripePaymentMethodId,
+    customer: b.stripeCustomerId,
+    payment_method: b.stripePaymentMethodId,
     off_session: true,
     confirm: true,
-    description: `Beauty Meet remainder for booking ${booking.id}`,
-    metadata: { bookingId: booking.id, kind: "remainder" },
+    description: `Beauty Meet remainder for booking ${b.id}`,
+    metadata: { bookingId: b.id, kind: "remainder" },
   };
 
   if (connectPayoutEnabled) {
     params.application_fee_amount = applicationFeeCents;
-    params.transfer_data = { destination: booking.provider.stripeAccountId };
+    params.transfer_data = { destination: b.provider.stripeAccountId };
   }
 
   const pi = await stripe.paymentIntents.create(params, {
-    idempotencyKey: `bm_${booking.id}_remainder_v1`,
+    idempotencyKey: `bm_${b.id}_remainder_v1`,
   });
 
   await prisma.payment.update({
@@ -114,9 +136,6 @@ export async function chargeRemainderForBooking(bookingId: string) {
   });
 
   if (pi.status === "succeeded") {
-    await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status: "COMPLETED", completedAt: new Date() },
-    });
+    await markCompletedAndMaybeReward(new Date());
   }
 }

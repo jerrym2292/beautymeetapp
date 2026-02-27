@@ -50,6 +50,7 @@ export default function ProviderBookingPage({
   const [startAt, setStartAt] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [notes, setNotes] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
 
   const [submitStatus, setSubmitStatus] = useState<"idle"|"submitting"|"success"|"error">("idle");
@@ -88,6 +89,7 @@ export default function ProviderBookingPage({
         startAt, 
         isMobile, 
         notes: notes || null,
+        referralCode: referralCode.trim() || null,
         intakeAnswers: Object.entries(intakeAnswers).map(([questionId, text]) => ({ questionId, text }))
       }),
     });
@@ -186,6 +188,10 @@ export default function ProviderBookingPage({
                 <span>Mobile appointment (adds $1/mile travel fee estimate)</span>
               </label>
 
+              <Field label="Referral code (optional)">
+                <input value={referralCode} onChange={(e)=>setReferralCode(e.target.value)} style={input} placeholder="Friend's code" />
+              </Field>
+
               <Field label="Notes (optional)">
                 <input value={notes} onChange={(e)=>setNotes(e.target.value)} style={input} />
               </Field>
@@ -195,14 +201,14 @@ export default function ProviderBookingPage({
                   <div style={{ fontSize: 20 }}>🛡️</div>
                   <div style={{ fontSize: 13, lineHeight: 1.4 }}>
                     <div style={{ fontWeight: 800, color: "#4ade80", marginBottom: 2 }}>Secure Escrow Protection</div>
-                    Your full payment is <b>authorized and held securely</b>. Funds are only released to the professional once the service is confirmed as completed.
+                    You pay a <b>25% deposit</b> to secure your appointment. The remaining balance is only charged once the service is confirmed as completed.
                   </div>
                 </div>
               ) : null}
 
               {selectedService ? (
                 <div style={{ opacity: 0.85, fontSize: 12, lineHeight: 1.35, padding: "0 4px" }}>
-                  Security deposit is <b>20%</b>. Platform fee is <b>5%</b>. Travel fee (if mobile) is <b>$1/mile</b> (ZIP estimate).
+                  Security deposit is <b>25%</b>. Platform fee is <b>5%</b>. Travel fee (if mobile) is <b>$1/mile</b> (ZIP estimate).
                 </div>
               ) : null}
 

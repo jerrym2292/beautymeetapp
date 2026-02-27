@@ -68,7 +68,7 @@ export default async function TechCancelConfirmPage({
       <section style={card}>
         <div style={{ fontWeight: 900 }}>Customer no-show</div>
         <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
-          This keeps the <b>20% security deposit</b> and releases the rest.
+          This keeps the <b>25% security deposit</b> and releases the rest.
         </div>
         <form action={`/api/provider/${token}/booking/${booking.id}/cancel`} method="post" style={{ marginTop: 10 }}>
           <input type="hidden" name="reason" value="NO_SHOW" />

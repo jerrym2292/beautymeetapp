@@ -19,6 +19,11 @@ export async function GET(req: Request) {
       fullName: true,
       phone: true,
       email: true,
+      dob: true,
+      licenseNumber: true,
+      licenseState: true,
+      licenseUrl: true,
+      idUrl: true,
       status: true,
     },
   });

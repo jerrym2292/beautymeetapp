@@ -7,6 +7,9 @@ export default function TechApplyPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [dob, setDob] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [licenseState, setLicenseState] = useState("");
 
   // Hidden from public
   const [address1, setAddress1] = useState("");
@@ -15,39 +18,64 @@ export default function TechApplyPage() {
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
 
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [idFile, setIdFile] = useState<File | null>(null);
+
   const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error"
   >("idle");
   const [error, setError] = useState<string | null>(null);
+
+  async function uploadOne(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/apply/upload", { method: "POST", body: fd });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j?.error || "Upload failed");
+    return j?.url as string;
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("submitting");
     setError(null);
 
-    const res = await fetch("/api/apply", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        fullName,
-        phone,
-        email: email || null,
-        address1,
-        address2: address2 || null,
-        city,
-        state: state.toUpperCase(),
-        zip,
-      }),
-    });
+    try {
+      const licenseUrl = licenseFile ? await uploadOne(licenseFile) : null;
+      const idUrl = idFile ? await uploadOne(idFile) : null;
 
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j?.error || "Something went wrong.");
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          phone,
+          email: email || null,
+          dob: dob || null,
+          licenseNumber: licenseNumber || null,
+          licenseState: licenseState.toUpperCase() || null,
+          licenseUrl,
+          idUrl,
+          address1,
+          address2: address2 || null,
+          city,
+          state: state.toUpperCase(),
+          zip,
+        }),
+      });
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j?.error || "Something went wrong.");
+        setStatus("error");
+        return;
+      }
+
+      setStatus("success");
+    } catch (err: any) {
+      setError(String(err?.message || err));
       setStatus("error");
-      return;
     }
-
-    setStatus("success");
   }
 
   return (
@@ -102,6 +130,67 @@ export default function TechApplyPage() {
               onChange={(e) => setEmail(e.target.value)}
               style={inputStyle}
               placeholder="jane@example.com"
+            />
+          </Field>
+
+          <Field label="Date of Birth">
+            <input
+              type="date"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              required
+              style={inputStyle}
+            />
+          </Field>
+
+          <div style={{ marginTop: 16, fontWeight: 800 }}>
+            Licensing
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            We use this to verify your cosmetology/nail technician license.
+          </div>
+
+          <Field label="License Number">
+            <input
+              value={licenseNumber}
+              onChange={(e) => setLicenseNumber(e.target.value)}
+              required
+              style={inputStyle}
+              placeholder="e.g. CO0123456"
+            />
+          </Field>
+
+          <Field label="License State">
+            <input
+              value={licenseState}
+              onChange={(e) => setLicenseState(e.target.value)}
+              required
+              style={inputStyle}
+              placeholder="GA"
+              maxLength={2}
+            />
+          </Field>
+
+          <div style={{ marginTop: 16, fontWeight: 800 }}>Uploads (recommended)</div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            Upload a clear photo/PDF of your license and a government-issued ID.
+          </div>
+
+          <Field label="License upload (photo/PDF)">
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="ID upload (photo/PDF)">
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setIdFile(e.target.files?.[0] || null)}
+              style={inputStyle}
             />
           </Field>
 

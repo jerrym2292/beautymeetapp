@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     );
   }
 
-  await prisma.$transaction([
+  const tx: any[] = [
     prisma.providerApplication.update({
       where: { id: appId },
       data: { status: "APPROVED" },
@@ -58,7 +58,23 @@ export async function POST(req: Request) {
         travelRateCents: 100,
       },
     }),
-  ]);
+  ];
+
+  // Admin PIN auth (no session user) is allowed for smoke/E2E; skip audit log in that case.
+  if (auth.user) {
+    tx.push(
+      prisma.adminAuditLog.create({
+        data: {
+          adminId: auth.user.id,
+          action: "APPROVE_PROVIDER",
+          targetId: appId,
+          details: JSON.stringify({ displayName, baseZip }),
+        },
+      })
+    );
+  }
+
+  await prisma.$transaction(tx);
 
   // TODO: send SMS to provider: approved
 

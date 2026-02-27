@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { providerId } = await params;
   const provider = await prisma.provider.findUnique({
-    where: { id: providerId },
+    where: { id: providerId, active: true },
     select: {
       id: true,
       displayName: true,

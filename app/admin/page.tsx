@@ -51,6 +51,27 @@ export default async function AdminPage() {
           <div style={{ fontWeight: 800, fontSize: 18 }}>Affiliate Management</div>
           <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>Manage affiliate codes and balance payouts.</div>
         </Link>
+
+        <Link href="/admin/issues" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Customer Issues</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Review and resolve customer-reported issues (remainder charging paused).
+          </div>
+        </Link>
+
+        <Link href="/admin/providers" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Providers</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Hide/disable technician profiles.
+          </div>
+        </Link>
+
+        <Link href="/admin/refunds" style={adminCard}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Refunds</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Refund deposits/remainders by booking.
+          </div>
+        </Link>
       </div>
     </main>
   );

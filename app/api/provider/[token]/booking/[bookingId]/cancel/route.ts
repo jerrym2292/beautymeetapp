@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 // Tech cancel requires a reason:
 // - reason=TECH (tech too busy/can't do it) => full refund (release auth)
-// - reason=NO_SHOW (customer no-show) => capture 20% deposit
+// - reason=NO_SHOW (customer no-show) => keep 25% deposit
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string; bookingId: string }> }

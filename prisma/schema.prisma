@@ -3,25 +3,30 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model ProviderApplication {
-  id        String            @id @default(cuid())
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  fullName  String
-  phone     String
-  email     String?
-  address1  String?
-  address2  String?
-  city      String?
-  state     String?
-  zip       String?
-  status    ApplicationStatus @default(PENDING)
-  notes     String?
-  provider  Provider?
+  id            String            @id @default(cuid())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  fullName      String
+  phone         String
+  email         String?
+  dob           DateTime?
+  licenseNumber String?
+  licenseState  String?
+  licenseUrl    String?
+  idUrl         String?
+  address1      String?
+  address2      String?
+  city          String?
+  state         String?
+  zip           String?
+  status        ApplicationStatus @default(PENDING)
+  notes         String?
+  provider      Provider?
 }
 
 model Provider {
@@ -46,9 +51,11 @@ model Provider {
   stripeAccountId      String?             @unique
   stripeChargesEnabled Boolean             @default(false)
   stripePayoutsEnabled Boolean             @default(false)
+  active               Boolean             @default(true)
   referredById         String?
   referralPaid         Boolean             @default(false)
   bookings             Booking[]
+  PortfolioImage       PortfolioImage[]
   referredBy           Affiliate?          @relation("TechReferrals", fields: [referredById], references: [id])
   application          ProviderApplication @relation(fields: [applicationId], references: [id])
   services             Service[]
@@ -93,58 +100,72 @@ model IntakeAnswer {
 }
 
 model Customer {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   fullName  String
-  phone     String    @unique
+  phone     String   @unique
   email     String?
-  bookings  Booking[]
+
+  // Customer-to-customer referrals
+  referralCode           String   @unique @default("LEGACY")
+  referredByCustomerId   String?
+  referredByCustomer     Customer?  @relation("CustomerReferrals", fields: [referredByCustomerId], references: [id])
+  referredCustomers      Customer[] @relation("CustomerReferrals")
+  referralRewardGranted  Boolean    @default(false)
+  nextBookingDiscountPct Int        @default(0)
+
+  bookings Booking[]
 }
 
 model Booking {
-  id                       String         @id @default(cuid())
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
-  status                   BookingStatus  @default(PENDING)
-  providerId               String
-  customerId               String
-  serviceId                String
-  startAt                  DateTime
-  notes                    String?
-  isMobile                 Boolean        @default(false)
-  customerZip              String
-  estimatedMiles           Int?
-  servicePriceCents        Int
+  id                String        @id @default(cuid())
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  status            BookingStatus @default(PENDING)
+  providerId        String
+  customerId        String
+  serviceId         String
+  startAt           DateTime
+  notes             String?
+  isMobile          Boolean       @default(false)
+  customerZip       String
+  estimatedMiles    Int?
+  servicePriceCents Int
+
+  // Discounts
+  discountPctApplied Int @default(0)
+  discountCents      Int @default(0)
+
   platformFeeCents         Int
   stripeFeeCents           Int
   depositCents             Int
   travelFeeCents           Int
   totalCents               Int
   affiliateId              String?
-  affiliateCommissionCents Int            @default(0)
+  affiliateCommissionCents Int     @default(0)
 
   // Completion + charging
-  providerConfirmedAt      DateTime?
-  customerConfirmedAt      DateTime?
-  autoChargeAt             DateTime?
-  issueReportedAt          DateTime?
-  completedAt              DateTime?
+  providerConfirmedAt DateTime?
+  customerConfirmedAt DateTime?
+  autoChargeAt        DateTime?
+  issueReportedAt     DateTime?
+  completedAt         DateTime?
 
-  customerConfirmToken     String?        @unique
-  customerCancelToken      String?        @unique
-  customerIssueToken       String?        @unique
+  customerConfirmToken String? @unique
+  customerCancelToken  String? @unique
+  customerIssueToken   String? @unique
 
-  stripeCustomerId         String?
-  stripePaymentMethodId    String?
+  stripeCustomerId      String?
+  stripePaymentMethodId String?
 
-  payments                 Payment[]
+  payments Payment[]
 
-  affiliate                Affiliate?     @relation("BookingReferrals", fields: [affiliateId], references: [id])
-  service                  Service        @relation(fields: [serviceId], references: [id])
-  customer                 Customer       @relation(fields: [customerId], references: [id])
-  provider                 Provider       @relation(fields: [providerId], references: [id])
-  intakeAnswers            IntakeAnswer[]
+  affiliate     Affiliate?     @relation("BookingReferrals", fields: [affiliateId], references: [id])
+  service       Service        @relation(fields: [serviceId], references: [id])
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  provider      Provider       @relation(fields: [providerId], references: [id])
+  intakeAnswers IntakeAnswer[]
 }
 
 model Payment {
@@ -152,15 +173,15 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   status          PaymentStatus @default(REQUIRES_PAYMENT)
-  type            PaymentType
+  type            PaymentType   @default(DEPOSIT)
   amountCents     Int
   currency        String        @default("USD")
   provider        String        @default("stripe")
   paymentIntentId String?
   latestChargeId  String?
 
-  bookingId       String
-  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String @default("LEGACY")
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
   @@index([paymentIntentId])
@@ -170,6 +191,16 @@ model StripeWebhookEvent {
   id        String   @id // Stripe event id
   createdAt DateTime @default(now())
   type      String
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  adminId   String
+  action    String   // e.g., "APPROVE_PROVIDER", "REFUND_PAYMENT", "HIDE_PROVIDER"
+  targetId  String   // e.g., providerId, paymentId, appId
+  details   String?  // JSON string or summary text
+  user      User     @relation(fields: [adminId], references: [id])
 }
 
 model Affiliate {
@@ -197,6 +228,7 @@ model User {
   affiliateId  String?              @unique
   resetTokens  PasswordResetToken[]
   sessions     Session[]
+  auditLogs    AdminAuditLog[]
   affiliate    Affiliate?           @relation(fields: [affiliateId], references: [id])
   provider     Provider?            @relation(fields: [providerId], references: [id])
 }
@@ -218,6 +250,15 @@ model PasswordResetToken {
   userId    String
   token     String    @unique
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PortfolioImage {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  providerId String
+  url        String
+  caption    String?
+  Provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 }
 
 enum ServiceCategory {

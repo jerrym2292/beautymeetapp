@@ -6,6 +6,11 @@ const Body = z.object({
   fullName: z.string().min(2).max(120),
   phone: z.string().min(7).max(30),
   email: z.string().email().nullable().optional(),
+  dob: z.string().nullable().optional(),
+  licenseNumber: z.string().nullable().optional(),
+  licenseState: z.string().nullable().optional(),
+  licenseUrl: z.string().nullable().optional(),
+  idUrl: z.string().nullable().optional(),
 
   // Hidden from public. Used for service area + future distance.
   address1: z.string().min(3).max(120).nullable().optional(),
@@ -25,13 +30,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const { fullName, phone, email, address1, address2, city, state, zip } = parsed.data;
+  const { fullName, phone, email, dob, licenseNumber, licenseState, licenseUrl, idUrl, address1, address2, city, state, zip } = parsed.data;
 
   const created = await prisma.providerApplication.create({
     data: {
       fullName,
       phone,
       email: email ?? null,
+      dob: dob ? new Date(dob) : null,
+      licenseNumber: licenseNumber ?? null,
+      licenseState: licenseState ?? null,
+      licenseUrl: licenseUrl ?? null,
+      idUrl: idUrl ?? null,
       address1: address1 ?? null,
       address2: address2 ?? null,
       city: city ?? null,

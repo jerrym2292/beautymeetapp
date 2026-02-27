@@ -4,6 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { safeMilesBetweenZips } from "@/lib/geo";
 import { getStripe } from "@/lib/stripe";
 
+function makeReferralCode() {
+  // short, readable-ish code
+  return randomUpperHex(4); // 8 chars
+}
+
+function randomUpperHex(bytes: number) {
+  // lazy import for edge/runtime safety
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { randomBytes } = require("crypto") as typeof import("crypto");
+  return randomBytes(bytes).toString("hex").toUpperCase();
+}
+
 export const runtime = "nodejs";
 
 const Body = z.object({
@@ -16,6 +28,7 @@ const Body = z.object({
   isMobile: z.boolean().default(false),
   notes: z.string().nullable().optional(),
   affiliateCode: z.string().nullable().optional(),
+  referralCode: z.string().trim().min(4).max(32).nullable().optional(),
   intakeAnswers: z
     .array(
       z.object({
@@ -62,6 +75,7 @@ export async function POST(req: Request) {
       notes,
       intakeAnswers,
       affiliateCode,
+      referralCode,
     } = parsed.data;
 
     const provider = await prisma.provider.findUnique({ where: { id: providerId } });
@@ -100,35 +114,87 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2) Pricing
+    // 2) Base pricing (before discounts)
     const estimatedMiles = isMobile ? estimateMilesZip(provider.baseZip, customerZip) : 0;
     const travelFeeCents = isMobile ? estimatedMiles * provider.travelRateCents : 0;
 
     const baseServicePriceCents = service.priceCents;
     const subtotalCents = baseServicePriceCents + travelFeeCents;
 
-    // Platform fee: 5% always
-    const platformFeeCents = Math.round(baseServicePriceCents * 0.05);
+    // 3) Customer record + referrals + consume "next booking" discount (atomic)
+    const referralCodeClean = (referralCode || "").trim().toUpperCase() || null;
+
+    const { customer, discountPctApplied } = await prisma.$transaction(async (tx) => {
+      // Ensure customer exists
+      let c = await tx.customer.findUnique({ where: { phone } });
+
+      if (!c) {
+        // Create with a referral code
+        // (Very low collision risk; unique constraint in DB should enforce.)
+        const code = makeReferralCode();
+        c = await tx.customer.create({
+          data: {
+            fullName,
+            phone,
+            referralCode: code,
+          },
+        });
+      } else {
+        // Keep name fresh; ensure referralCode exists
+        if (!c.referralCode) {
+          const code = makeReferralCode();
+          c = await tx.customer.update({
+            where: { id: c.id },
+            data: { fullName, referralCode: code },
+          });
+        } else {
+          c = await tx.customer.update({ where: { id: c.id }, data: { fullName } });
+        }
+      }
+
+      // Attach referrer on first-ever COMPLETED booking only (per your rule)
+      if (referralCodeClean && isFirstBooking && !c.referredByCustomerId) {
+        const referrer = await tx.customer.findUnique({
+          where: { referralCode: referralCodeClean },
+          select: { id: true },
+        });
+        if (referrer && referrer.id !== c.id) {
+          c = await tx.customer.update({
+            where: { id: c.id },
+            data: { referredByCustomerId: referrer.id },
+          });
+        }
+      }
+
+      // Apply and consume any earned discount
+      const pct = Math.max(0, Math.min(100, c.nextBookingDiscountPct || 0));
+      if (pct > 0) {
+        await tx.customer.update({ where: { id: c.id }, data: { nextBookingDiscountPct: 0 } });
+      }
+
+      return { customer: c, discountPctApplied: pct };
+    });
+
+    // 4) Apply discount to subtotal (service + travel)
+    const discountCents = Math.round(subtotalCents * (discountPctApplied / 100));
+    const discountedSubtotalCents = Math.max(0, subtotalCents - discountCents);
+
+    // Platform fee: 5% always (service + travel), on the amount actually charged
+    const platformFeeCents = Math.round(discountedSubtotalCents * 0.05);
 
     // Affiliate commission: 10% on first booking (if valid code)
     const affiliateCommissionCents = affiliate ? Math.round(baseServicePriceCents * 0.1) : 0;
 
     // Stripe processing fee (customer-visible): 3% on each charge we run.
-    const depositBaseCents = Math.max(1, Math.round(subtotalCents * DEPOSIT_PCT));
+    const depositBaseCents = Math.max(1, Math.round(discountedSubtotalCents * DEPOSIT_PCT));
     const depositStripeFeeCents = Math.round(depositBaseCents * 0.03);
     const depositTotalCents = depositBaseCents + depositStripeFeeCents;
 
-    const remainingBaseCents = Math.max(0, subtotalCents - depositBaseCents);
+    const remainingBaseCents = Math.max(0, discountedSubtotalCents - depositBaseCents);
     const remainingStripeFeeCents = Math.round(remainingBaseCents * 0.03);
 
     const totalStripeFeeCents = depositStripeFeeCents + remainingStripeFeeCents;
-    const totalCents = subtotalCents + totalStripeFeeCents;
-
-    const customer = await prisma.customer.upsert({
-      where: { phone },
-      update: { fullName },
-      create: { fullName, phone },
-    });
+    const totalCents = discountedSubtotalCents + totalStripeFeeCents;
 
     const { randomBytes } = await import("crypto");
     const customerConfirmToken = randomBytes(16).toString("hex");
@@ -147,6 +213,8 @@ export async function POST(req: Request) {
         customerZip,
         estimatedMiles: isMobile ? estimatedMiles : null,
         servicePriceCents: baseServicePriceCents,
+        discountPctApplied,
+        discountCents,
         platformFeeCents,
         stripeFeeCents: totalStripeFeeCents,
         depositCents: depositTotalCents,
@@ -208,7 +276,8 @@ export async function POST(req: Request) {
     // For the remainder charge we will create a new PaymentIntent later.
     const checkoutParams = {
       mode: "payment",
-      customer_creation: "if_required",
+      // We need a Customer object so we can reuse the payment method off-session for the remainder.
+      customer_creation: "always",
       success_url: `${baseUrl}/book/success?bookingId=${booking.id}&cancelToken=${customerCancelToken}&issueToken=${customerIssueToken}`,
       cancel_url: `${baseUrl}/book/cancel?bookingId=${booking.id}`,
       metadata: { bookingId: booking.id, paymentId: depositPayment.id, kind: "deposit" },
