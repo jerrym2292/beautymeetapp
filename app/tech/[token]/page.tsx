@@ -163,10 +163,32 @@ export default async function TechDashboard({
       <section style={card}>
         <div style={{ fontWeight: 800 }}>Public Profile</div>
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-          These links show on your public booking page.
+          Your bio + socials + profile photo show on your public booking page.
         </div>
 
-        <form action={`/api/provider/${provider.accessToken}/profile`} method="post" style={{ marginTop: 10, display: "grid", gap: 10 }}>
+        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          <form action={`/api/provider/${provider.accessToken}/avatar`} method="post" encType="multipart/form-data">
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <input name="file" type="file" accept="image/*" style={{ ...input, width: "auto" }} />
+              <button style={{ ...btn, width: "auto" }} type="submit">Upload profile photo</button>
+            </div>
+          </form>
+
+          {(provider as any).avatarUrl ? (
+            <ConfirmForm
+              action={`/api/provider/${provider.accessToken}/avatar`}
+              method="post"
+              confirmText="Remove your profile photo?"
+            >
+              <input type="hidden" name="clear" value="1" />
+              <button style={{ ...btn, width: "auto", borderColor: "rgba(248,113,113,0.5)", background: "rgba(248,113,113,0.12)" }} type="submit">
+                Remove photo
+              </button>
+            </ConfirmForm>
+          ) : null}
+        </div>
+
+        <form action={`/api/provider/${provider.accessToken}/profile`} method="post" style={{ marginTop: 12, display: "grid", gap: 10 }}>
           <textarea
             name="bio"
             defaultValue={provider.bio || ""}

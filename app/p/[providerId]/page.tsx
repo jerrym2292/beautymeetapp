@@ -13,6 +13,7 @@ type IntakeQuestion = {
 type Provider = {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
   bio: string | null;
   instagram: string | null;
   facebook: string | null;
@@ -125,9 +126,38 @@ export default function ProviderBookingPage({
         <div style={{ marginTop: 14, opacity: 0.85 }}>Loading…</div>
       ) : (
         <>
-          <h1 style={{ marginTop: 12 }}>{provider.displayName}</h1>
-          <div style={{ opacity: 0.8, marginTop: 4 }}>
-            {provider.mode}{provider.maxTravelMiles ? ` • Mobile up to ${provider.maxTravelMiles} miles` : ""}
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+            {provider.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={provider.avatarUrl}
+                alt={`${provider.displayName} profile photo`}
+                style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", border: "1px solid rgba(255,255,255,0.12)" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                }}
+              >
+                {provider.displayName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+
+            <div>
+              <h1 style={{ margin: 0 }}>{provider.displayName}</h1>
+              <div style={{ opacity: 0.8, marginTop: 4 }}>
+                {provider.mode}{provider.maxTravelMiles ? ` • Mobile up to ${provider.maxTravelMiles} miles` : ""}
+              </div>
+            </div>
           </div>
 
           {(provider.bio || provider.instagram || provider.facebook || provider.tiktok) ? (

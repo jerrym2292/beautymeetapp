@@ -11,6 +11,7 @@ export async function GET(
     select: {
       id: true,
       displayName: true,
+      avatarUrl: true,
       bio: true,
       instagram: true,
       facebook: true,

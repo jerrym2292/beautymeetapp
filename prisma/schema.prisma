@@ -36,6 +36,7 @@ model Provider {
   applicationId        String              @unique
   accessToken          String              @unique
   displayName          String
+  avatarUrl            String?
   bio                  String?
   instagram            String?
   facebook             String?
