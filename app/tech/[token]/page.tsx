@@ -88,26 +88,37 @@ export default async function TechDashboard({
         </div>
 
         {provider.subscriptionActive ? (
-          <ConfirmForm
-            action={`/api/provider/${provider.accessToken}/subscription`}
-            method="post"
-            confirmText="Are you sure you want to unsubscribe? Your profile will become invisible to customers and you will stop receiving new bookings."
-            style={{ marginTop: 10 }}
-          >
-            <input type="hidden" name="action" value="unsubscribe" />
-            <button style={{ ...btn, borderColor: "rgba(248,113,113,0.5)", background: "rgba(248,113,113,0.12)" }} type="submit">
-              Unsubscribe (hide my profile)
-            </button>
-          </ConfirmForm>
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            <form action={`/api/provider/${provider.accessToken}/subscription/portal`} method="post">
+              <button style={btn} type="submit">Manage billing (Stripe portal)</button>
+            </form>
+
+            <ConfirmForm
+              action={`/api/provider/${provider.accessToken}/subscription`}
+              method="post"
+              confirmText="Are you sure you want to unsubscribe? Your profile will become invisible to customers and you will stop receiving new bookings."
+            >
+              <input type="hidden" name="action" value="unsubscribe" />
+              <button
+                style={{
+                  ...btn,
+                  borderColor: "rgba(248,113,113,0.5)",
+                  background: "rgba(248,113,113,0.12)",
+                }}
+                type="submit"
+              >
+                Unsubscribe (cancel + hide)
+              </button>
+            </ConfirmForm>
+          </div>
         ) : (
-          <form action={`/api/provider/${provider.accessToken}/subscription`} method="post" style={{ marginTop: 10 }}>
-            <input type="hidden" name="action" value="subscribe" />
-            <button style={btn} type="submit">Subscribe (make me visible)</button>
+          <form action={`/api/provider/${provider.accessToken}/subscription/start`} method="post" style={{ marginTop: 10 }}>
+            <button style={btn} type="submit">Subscribe (Stripe)</button>
           </form>
         )}
 
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-          Note: Stripe billing hookup can be added next. For now, this just controls visibility.
+          Subscription controls your visibility to customers.
         </div>
       </section>
 

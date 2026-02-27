@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
 // Provider self-service subscribe/unsubscribe.
-// For now this is NOT Stripe-backed; it just flips flags.
+// Stripe-backed when STRIPE_TECH_SUB_PRICE_ID is configured.
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -21,18 +22,29 @@ export async function POST(
     return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
   }
 
-  if (action === "unsubscribe") {
+  if (action === "subscribe") {
+    // Stripe flow starts via /subscription/start.
+    // Keep a manual fallback for admins/dev.
     await prisma.provider.update({
       where: { id: provider.id },
-      data: { subscriptionActive: false, active: false },
+      data: { subscriptionActive: true, active: true },
     });
     return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
   }
 
-  // subscribe
+  // unsubscribe
+  if (process.env.STRIPE_SECRET_KEY && provider.stripeSubscriptionId) {
+    try {
+      const stripe = getStripe();
+      await stripe.subscriptions.cancel(provider.stripeSubscriptionId);
+    } catch {
+      // ignore; webhook may still flip state later
+    }
+  }
+
   await prisma.provider.update({
     where: { id: provider.id },
-    data: { subscriptionActive: true, active: true },
+    data: { subscriptionActive: false, active: false, stripeSubscriptionId: null },
   });
 
   return NextResponse.redirect(new URL(`/tech/${token}`, req.url));

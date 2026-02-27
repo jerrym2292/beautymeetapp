@@ -47,6 +47,7 @@ model Provider {
   maxTravelMiles       Int?
   travelRateCents      Int                 @default(100)
   subscriptionActive   Boolean             @default(false)
+  stripeCustomerId     String?             @unique
   stripeSubscriptionId String?             @unique
   stripeAccountId      String?             @unique
   stripeChargesEnabled Boolean             @default(false)

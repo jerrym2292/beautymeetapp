@@ -38,6 +38,8 @@ export async function POST(req: Request) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as any;
+
+      // A) Booking deposit checkout
       const bookingId = session?.metadata?.bookingId as string | undefined;
       const paymentId = session?.metadata?.paymentId as string | undefined;
       const paymentIntentId = session?.payment_intent as string | undefined;
@@ -58,7 +60,6 @@ export async function POST(req: Request) {
         }
 
         // Save payment method for off-session remainder charge.
-        // Need to fetch PI to get payment_method.
         try {
           const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
           const pm = (pi as any)?.payment_method as string | null | undefined;
@@ -72,7 +73,49 @@ export async function POST(req: Request) {
         } catch {
           // non-fatal
         }
+
+        break;
       }
+
+      // B) Tech subscription checkout
+      const kind = session?.metadata?.kind as string | undefined;
+      const providerId = session?.metadata?.providerId as string | undefined;
+      const subscriptionId = session?.subscription as string | undefined;
+
+      if (kind === "tech_subscription" && providerId && stripeCustomerId && subscriptionId) {
+        await prisma.provider.updateMany({
+          where: { id: providerId },
+          data: {
+            stripeCustomerId,
+            stripeSubscriptionId: subscriptionId,
+            subscriptionActive: true,
+            active: true,
+          },
+        });
+      }
+
+      break;
+    }
+
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const sub = event.data.object as any;
+      const subId = sub.id as string;
+      const customerId = sub.customer as string;
+      const status = sub.status as string;
+      const active = status === "active" || status === "trialing";
+
+      await prisma.provider.updateMany({
+        where: {
+          OR: [{ stripeSubscriptionId: subId }, { stripeCustomerId: customerId }],
+        },
+        data: {
+          stripeSubscriptionId: subId,
+          stripeCustomerId: customerId,
+          subscriptionActive: active,
+          active: active,
+        },
+      });
       break;
     }
 
