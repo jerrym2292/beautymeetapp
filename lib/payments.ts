@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
+import { requestTechReviewBySMS } from "@/lib/reviews";
 
 function cents(n: number) {
   return Math.max(0, Math.round(n));
@@ -42,6 +43,7 @@ export async function chargeRemainderForBooking(bookingId: string) {
   // Already charged?
   const existingRemainder = b.payments.find((p) => p.type === "REMAINDER");
   async function markCompletedAndMaybeReward(ts: Date) {
+    // Mark completed + reward referral
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
         where: { id: b.id },
@@ -65,6 +67,22 @@ export async function chargeRemainderForBooking(bookingId: string) {
         }
       }
     });
+
+    // Review request (once)
+    const claimed = await prisma.booking.updateMany({
+      where: { id: b.id, reviewRequestedAt: null },
+      data: { reviewRequestedAt: new Date() },
+    });
+
+    if (claimed.count > 0) {
+      await requestTechReviewBySMS({
+        to: b.customer.phone,
+        providerName: b.provider.displayName,
+        providerId: b.providerId,
+        bookingId: b.id,
+        baseUrl: process.env.APP_BASE_URL,
+      }).catch(() => null);
+    }
   }
 
   if (existingRemainder && existingRemainder.status === "CAPTURED") {

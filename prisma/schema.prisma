@@ -154,6 +154,7 @@ model Booking {
   autoChargeAt        DateTime?
   issueReportedAt     DateTime?
   completedAt         DateTime?
+  reviewRequestedAt    DateTime?
 
   customerConfirmToken String? @unique
   customerCancelToken  String? @unique
