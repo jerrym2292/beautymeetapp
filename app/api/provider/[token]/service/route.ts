@@ -6,7 +6,9 @@ const Body = z.object({
   name: z.string().min(2).max(120).optional(),
   category: z.enum(["LASHES_BROWS", "NAILS"]).optional(),
   durationMin: z.coerce.number().int().min(5).max(600).optional(),
+  // Accept either dollars or cents
   price: z.coerce.number().min(1).max(2000).optional(),
+  priceCents: z.coerce.number().int().min(100).max(200000).optional(),
   quick: z.string().optional(),
 });
 
@@ -15,11 +17,23 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const form = await req.formData();
-  const obj: any = Object.fromEntries(form.entries());
+
+  const ct = req.headers.get("content-type") || "";
+  const wantsJson = ct.includes("application/json");
+
+  let obj: any = {};
+  if (wantsJson) {
+    obj = (await req.json().catch(() => ({}))) || {};
+  } else {
+    const form = await req.formData();
+    obj = Object.fromEntries(form.entries());
+  }
+
   const parsed = Body.safeParse(obj);
   if (!parsed.success) {
-    return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
+    return wantsJson
+      ? NextResponse.json({ error: "Invalid request" }, { status: 400 })
+      : NextResponse.redirect(new URL(`/tech/${token}`, req.url));
   }
 
   const provider = await prisma.provider.findUnique({ where: { accessToken: token } });
@@ -39,15 +53,19 @@ export async function POST(
     await prisma.service.createMany({
       data: templates.map((t) => ({ ...t, providerId: provider.id })),
     });
-    return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
+    return wantsJson
+      ? NextResponse.json({ ok: true })
+      : NextResponse.redirect(new URL(`/tech/${token}`, req.url));
   }
 
   const name = parsed.data.name!;
   const category = parsed.data.category!;
   const durationMin = parsed.data.durationMin!;
-  const priceCents = Math.round((parsed.data.price! as number) * 100);
+  const priceCents = parsed.data.priceCents
+    ? Number(parsed.data.priceCents)
+    : Math.round(Number(parsed.data.price!) * 100);
 
-  await prisma.service.create({
+  const service = await prisma.service.create({
     data: {
       providerId: provider.id,
       name,
@@ -55,7 +73,10 @@ export async function POST(
       durationMin,
       priceCents,
     },
+    select: { id: true },
   });
 
-  return NextResponse.redirect(new URL(`/tech/${token}`, req.url));
+  return wantsJson
+    ? NextResponse.json({ ok: true, service })
+    : NextResponse.redirect(new URL(`/tech/${token}`, req.url));
 }
