@@ -7,6 +7,7 @@ const Q = z.object({
   zip: z.string().min(5).max(10),
   radius: z.coerce.number().int().min(1).max(500).default(25),
   category: z.enum(["ALL", "LASHES_BROWS", "NAILS"]).default("ALL"),
+  name: z.string().max(80).optional(),
 });
 
 export async function GET(req: Request) {
@@ -15,17 +16,22 @@ export async function GET(req: Request) {
     zip: url.searchParams.get("zip"),
     radius: url.searchParams.get("radius") ?? "25",
     category: url.searchParams.get("category") ?? "ALL",
+    name: url.searchParams.get("name") || undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid search" }, { status: 400 });
   }
 
-  const { zip, radius, category } = parsed.data;
+  const { zip, radius, category, name } = parsed.data;
 
   // For MVP: brute force filter in-memory.
   const providers = await prisma.provider.findMany({
-    where: { active: true, subscriptionActive: true },
+    where: {
+      active: true,
+      subscriptionActive: true,
+      ...(name ? { displayName: { contains: name } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

@@ -22,6 +22,7 @@ export default function BookPage() {
   const [zip, setZip] = useState(sp.get("zip") || "");
   const [radius, setRadius] = useState<10 | 25 | 50>((Number(sp.get("radius")) as any) || 25);
   const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS">((sp.get("category") as any) || "ALL");
+  const [name, setName] = useState(sp.get("name") || "");
 
   const [results, setResults] = useState<Provider[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -37,7 +38,7 @@ export default function BookPage() {
     setError(null);
 
     const res = await fetch(
-      `/api/search/providers?zip=${encodeURIComponent(zip)}&radius=${radius}&category=${category}`
+      `/api/search/providers?zip=${encodeURIComponent(zip)}&radius=${radius}&category=${category}${name.trim() ? `&name=${encodeURIComponent(name.trim())}` : ""}`
     );
     const j = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -64,6 +65,13 @@ export default function BookPage() {
             value={zip}
             onChange={(e) => setZip(e.target.value)}
             placeholder="Enter your ZIP (required)"
+            style={input}
+          />
+
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Search by tech name (optional)"
             style={input}
           />
 
