@@ -21,14 +21,14 @@ export default async function TechDashboard({
         include: { questions: true }
       },
       bookings: {
-        orderBy: { createdAt: "desc" },
+        orderBy: { startAt: "desc" },
         include: {
           customer: true,
           service: true,
           payments: { orderBy: { createdAt: "desc" } },
           intakeAnswers: { include: { question: true } },
         },
-        take: 25,
+        // For MVP we load all for tax/history; add pagination later if needed.
       },
     },
   });
@@ -264,7 +264,16 @@ export default async function TechDashboard({
       </section>
 
       <section style={card}>
-        <div style={{ fontWeight: 800 }}>Recent booking requests</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div style={{ fontWeight: 800 }}>Service History</div>
+          <a 
+            href={`/api/provider/${provider.accessToken}/export`} 
+            style={{ ...btn, width: "auto", fontSize: 12, padding: "6px 12px" }}
+            download
+          >
+            📊 Download CSV (Tax Export)
+          </a>
+        </div>
         <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
           {provider.bookings.map((b) => (
             <div key={b.id} style={{ ...card, marginTop: 0 }}>
