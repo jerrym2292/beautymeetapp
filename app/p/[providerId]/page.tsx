@@ -52,7 +52,17 @@ export default function ProviderBookingPage({
   const [phone, setPhone] = useState("");
   const [customerZip, setCustomerZip] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const [startAt, setStartAt] = useState("");
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const [date, setDate] = useState<string>(todayStr);
+  const [time, setTime] = useState<string>("");
+
   const [isMobile, setIsMobile] = useState(false);
   const [notes, setNotes] = useState("");
   const [referralCode, setReferralCode] = useState("");
@@ -76,6 +86,71 @@ export default function ProviderBookingPage({
   }, [providerId]);
 
   const selectedService = useMemo(() => provider?.services.find(s => s.id === serviceId) || null, [provider, serviceId]);
+
+  const [busy, setBusy] = useState<Array<{ startAt: string; endAt: string }>>([]);
+  const [slots, setSlots] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!providerId || !date) return;
+    (async () => {
+      const res = await fetch(`/api/providers/${providerId}/availability?date=${encodeURIComponent(date)}`);
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBusy([]);
+        return;
+      }
+      setBusy(j.busy || []);
+    })();
+  }, [providerId, date]);
+
+  useEffect(() => {
+    const durMin = selectedService?.durationMin || 60;
+    // Build 30-minute slots from 9:00 to 19:00 (end exclusive)
+    const startMin = 9 * 60;
+    const endMin = 19 * 60;
+
+    function toMinutes(hhmm: string) {
+      const [hh, mm] = hhmm.split(":").map(Number);
+      return hh * 60 + mm;
+    }
+
+    // Convert busy intervals to minutes within the selected date in local time
+    const busyRanges = busy
+      .map((b) => ({
+        s: new Date(b.startAt),
+        e: new Date(b.endAt),
+      }))
+      .filter((r) => {
+        const d = new Date(date + "T00:00:00");
+        return r.s >= d && r.s < new Date(d.getTime() + 24 * 60 * 60 * 1000);
+      })
+      .map((r) => {
+        const s = r.s.getHours() * 60 + r.s.getMinutes();
+        const e = r.e.getHours() * 60 + r.e.getMinutes();
+        return { s, e };
+      });
+
+    const out: string[] = [];
+    for (let m = startMin; m + durMin <= endMin; m += 30) {
+      const hh = String(Math.floor(m / 60)).padStart(2, "0");
+      const mm = String(m % 60).padStart(2, "0");
+      const t = `${hh}:${mm}`;
+      const slotStart = toMinutes(t);
+      const slotEnd = slotStart + durMin;
+
+      const overlaps = busyRanges.some((r) => slotStart < r.e && slotEnd > r.s);
+      if (!overlaps) out.push(t);
+    }
+
+    setSlots(out);
+    // reset time if it's no longer valid
+    if (time && !out.includes(time)) setTime("");
+  }, [busy, selectedService, date]);
+
+  const startAt = useMemo(() => {
+    if (!date || !time) return "";
+    return `${date} ${time}`;
+  }, [date, time]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -242,8 +317,33 @@ export default function ProviderBookingPage({
                 </div>
               )}
 
-              <Field label="Requested date/time">
-                <input value={startAt} onChange={(e)=>setStartAt(e.target.value)} required style={input} placeholder="YYYY-MM-DD HH:MM" />
+              <Field label="Date">
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                  style={input}
+                />
+              </Field>
+
+              <Field label="Time">
+                <select
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  required
+                  style={input as any}
+                >
+                  <option value="">Select a time…</option>
+                  {slots.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+                  30-minute slots • default hours 9:00–19:00
+                </div>
               </Field>
 
               <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
