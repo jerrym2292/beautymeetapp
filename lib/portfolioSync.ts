@@ -1,7 +1,15 @@
 import { ScrapflyClient, ScrapeConfig } from "scrapfly-sdk";
 import { prisma } from "./prisma";
 
-const scrapfly = new ScrapflyClient({ key: process.env.SCRAPFLY_API_KEY || "" });
+function getScrapflyClient() {
+  const key = process.env.SCRAPFLY_API_KEY;
+  if (!key) {
+    // Important: do NOT instantiate ScrapflyClient at module load time.
+    // Next.js may evaluate this file during build/route collection.
+    throw new Error("SCRAPFLY_API_KEY is not set");
+  }
+  return new ScrapflyClient({ key });
+}
 
 export async function syncInstagramPortfolio(providerId: string, instagramHandle: string) {
   const handle = instagramHandle.replace("@", "").trim();
@@ -9,6 +17,8 @@ export async function syncInstagramPortfolio(providerId: string, instagramHandle
 
   try {
     // We use Scrapfly to scrape the public profile page
+    const scrapfly = getScrapflyClient();
+
     const result = await scrapfly.scrape(new ScrapeConfig({
       url: `https://www.instagram.com/${handle}/`,
       asp: true,
