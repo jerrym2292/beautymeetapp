@@ -1,6 +1,6 @@
 -- Add missing fields to ProviderApplication (production hotfix)
-ALTER TABLE "ProviderApplication" ADD COLUMN IF NOT EXISTS "dob" TIMESTAMP(3);
-ALTER TABLE "ProviderApplication" ADD COLUMN IF NOT EXISTS "licenseNumber" TEXT;
-ALTER TABLE "ProviderApplication" ADD COLUMN IF NOT EXISTS "licenseState" TEXT;
-ALTER TABLE "ProviderApplication" ADD COLUMN IF NOT EXISTS "licenseUrl" TEXT;
-ALTER TABLE "ProviderApplication" ADD COLUMN IF NOT EXISTS "idUrl" TEXT;
+ALTER TABLE "ProviderApplication" ADD COLUMN "dob" DATETIME;
+ALTER TABLE "ProviderApplication" ADD COLUMN "licenseNumber" TEXT;
+ALTER TABLE "ProviderApplication" ADD COLUMN "licenseState" TEXT;
+ALTER TABLE "ProviderApplication" ADD COLUMN "licenseUrl" TEXT;
+ALTER TABLE "ProviderApplication" ADD COLUMN "idUrl" TEXT;
