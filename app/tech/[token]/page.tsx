@@ -8,6 +8,7 @@ import TravelZoneManager from "./TravelZoneManager";
 import ClientListTab from "./ClientListTab";
 import MarketingTab from "./MarketingTab";
 import EarningsTab from "./EarningsTab";
+import CalendarTab from "./CalendarTab";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,19 @@ export default async function TechDashboard({
         servicesCount={provider.services.length}
       >
         {{
+          calendar: (
+            <CalendarTab
+              bookings={(provider.bookings as any[]).map((b) => ({
+                id: b.id,
+                startAt: new Date(b.startAt).toISOString(),
+                status: b.status,
+                isMobile: b.isMobile,
+                totalCents: b.totalCents,
+                service: { name: b.service.name, durationMin: b.service.durationMin },
+                customer: { fullName: b.customer.fullName },
+              }))}
+            />
+          ),
           bookings: (
             <section style={glassCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

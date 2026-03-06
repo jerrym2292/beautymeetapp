@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Tab = "BOOKINGS" | "EARNINGS" | "CLIENTS" | "WAITLIST" | "SERVICES" | "MARKETING" | "SETTINGS";
+type Tab = "CALENDAR" | "BOOKINGS" | "EARNINGS" | "CLIENTS" | "WAITLIST" | "SERVICES" | "MARKETING" | "SETTINGS";
 
 export default function DashboardTabs({ 
   children,
@@ -16,12 +16,13 @@ export default function DashboardTabs({
     waitlist: React.ReactNode;
     services: React.ReactNode;
     marketing: React.ReactNode;
+    calendar: React.ReactNode;
     settings: React.ReactNode;
   },
   bookingsCount: number,
   servicesCount: number
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>("BOOKINGS");
+  const [activeTab, setActiveTab] = useState<Tab>("CALENDAR");
 
   const tabStyle = (tab: Tab): React.CSSProperties => ({
     padding: "12px 16px",
@@ -49,6 +50,9 @@ export default function DashboardTabs({
         overflowX: "auto",
         whiteSpace: "nowrap"
       }}>
+        <div onClick={() => setActiveTab("CALENDAR")} style={tabStyle("CALENDAR")}>
+          Calendar
+        </div>
         <div onClick={() => setActiveTab("BOOKINGS")} style={tabStyle("BOOKINGS")}>
           Bookings
           <span style={badgeStyle}>{bookingsCount}</span>
@@ -75,6 +79,7 @@ export default function DashboardTabs({
       </nav>
 
       <div style={{ paddingBottom: 40 }}>
+        {activeTab === "CALENDAR" && children.calendar}
         {activeTab === "BOOKINGS" && children.bookings}
         {activeTab === "WAITLIST" && children.waitlist}
         {activeTab === "EARNINGS" && children.earnings}
