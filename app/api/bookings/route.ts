@@ -122,16 +122,6 @@ export async function POST(req: Request) {
     create: { fullName, phone },
   });
 
-  const payment = await prisma.payment.create({
-    data: {
-      status: "REQUIRES_PAYMENT",
-      amountCents: totalCents,
-      currency: "USD",
-      provider: "stripe",
-    },
-    select: { id: true },
-  });
-
   const { randomBytes } = await import("crypto");
   const customerConfirmToken = randomBytes(16).toString("hex");
   const customerCancelToken = randomBytes(16).toString("hex");
@@ -152,7 +142,6 @@ export async function POST(req: Request) {
       depositCents: Math.round(totalCents * 0.2), // 20% deposit
       travelFeeCents,
       totalCents,
-      paymentId: payment.id,
       customerConfirmToken,
       customerCancelToken,
       affiliateId: affiliate?.id,
@@ -163,6 +152,19 @@ export async function POST(req: Request) {
           text: a.text
         }))
       } : undefined
+    },
+    select: { id: true },
+  });
+
+  // Create payment record linked to booking (Booking no longer stores a single paymentId)
+  const payment = await prisma.payment.create({
+    data: {
+      bookingId: booking.id,
+      status: "REQUIRES_PAYMENT",
+      amountCents: totalCents,
+      currency: "USD",
+      provider: "stripe",
+      type: "DEPOSIT",
     },
     select: { id: true },
   });

@@ -8,25 +8,42 @@ datasource db {
 }
 
 model ProviderApplication {
-  id            String            @id @default(cuid())
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  fullName      String
-  phone         String
-  email         String?
-  dob           DateTime?
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fullName  String
+  phone     String
+  email     String?
+  dob       DateTime?
+
+  // New: legal name as it appears on the license (for strict verification)
+  legalNameOnLicense String?
+
+  // License / ID artifacts
   licenseNumber String?
   licenseState  String?
   licenseUrl    String?
   idUrl         String?
-  address1      String?
-  address2      String?
-  city          String?
-  state         String?
-  zip           String?
-  status        ApplicationStatus @default(PENDING)
-  notes         String?
-  provider      Provider?
+
+  // Multi-category application
+  appliedCategoriesJson String?
+  categoryLicensesJson  String?
+
+  // Auto-verification results
+  verificationStatus      String?
+  verificationDetailsJson String?
+  verificationSourceJson  String?
+  verifiedAt              DateTime?
+
+  address1 String?
+  address2 String?
+  city     String?
+  state    String?
+  zip      String?
+  status   ApplicationStatus @default(PENDING)
+  notes    String?
+
+  provider Provider?
 }
 
 model Provider {
@@ -47,6 +64,14 @@ model Provider {
   baseCity             String
   baseState            String
   baseZip              String
+
+  // Travel + portfolio
+  travelZonesJson           String?
+  travelZoneSurchargesJson  String?
+  portfolioUrlsJson         String?
+  kitEquipmentJson          String?
+  rebookingSmsEnabled       Boolean @default(true)
+
   maxTravelMiles       Int?
   travelRateCents      Int                 @default(100)
   subscriptionActive   Boolean             @default(false)
@@ -79,9 +104,11 @@ model Service {
   providerId  String
   category    ServiceCategory
   name        String
-  durationMin Int
-  priceCents  Int
-  active      Boolean          @default(true)
+  durationMin      Int
+  priceCents       Int
+  prepInstructions String?
+  rebookingWeeks   Int              @default(3)
+  active           Boolean          @default(true)
   bookings    Booking[]
   questions   IntakeQuestion[]
   provider    Provider         @relation(fields: [providerId], references: [id])

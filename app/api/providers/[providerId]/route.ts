@@ -21,7 +21,6 @@ export async function GET(
       travelRateCents: true,
       portfolioUrlsJson: true,
       kitEquipmentJson: true,
-      instagram: true,
       services: {
         where: { active: true },
         orderBy: { priceCents: "asc" },
