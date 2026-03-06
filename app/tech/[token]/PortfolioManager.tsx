@@ -85,28 +85,44 @@ export default function PortfolioManager({
       </div>
 
       <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-        {links.map((url, idx) => (
-          <div
-            key={url + idx}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 10,
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.04)",
-            }}
-          >
-            <a href={url} target="_blank" rel="noreferrer" style={{ color: "#D4AF37", fontWeight: 700, overflowWrap: "anywhere" }}>
-              {url}
-            </a>
-            <button onClick={() => removeLink(idx)} disabled={loading} style={dangerBtnStyle}>
-              Remove
-            </button>
-          </div>
-        ))}
+        {links.map((url, idx) => {
+          let label = url;
+          try {
+            const h = new URL(url).hostname.replace(/^www\./, "");
+            label = h;
+          } catch {}
+
+          return (
+            <div
+              key={url + idx}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#D4AF37", fontWeight: 900, textDecoration: "none" }}
+                >
+                  {label}
+                </a>
+                <div style={{ opacity: 0.75, fontSize: 12, marginTop: 3, overflowWrap: "anywhere" }}>{url}</div>
+              </div>
+              <button onClick={() => removeLink(idx)} disabled={loading} style={dangerBtnStyle}>
+                Remove
+              </button>
+            </div>
+          );
+        })}
         {links.length === 0 ? (
           <div style={{ opacity: 0.65, fontSize: 13 }}>No links yet.</div>
         ) : null}

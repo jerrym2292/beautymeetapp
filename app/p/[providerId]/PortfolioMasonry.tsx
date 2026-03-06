@@ -32,27 +32,35 @@ export default function PortfolioMasonry({ photosJson }: { photosJson: string | 
 
       {links.length > 0 ? (
         <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
-          {links.map((url, i) => (
-            <a
-              key={url + i}
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "block",
-                padding: 12,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.04)",
-                color: "#D4AF37",
-                fontWeight: 800,
-                textDecoration: "none",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {url}
-            </a>
-          ))}
+          {links.map((url, i) => {
+            let label = url;
+            try {
+              label = new URL(url).hostname.replace(/^www\./, "");
+            } catch {}
+
+            return (
+              <a
+                key={url + i}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "block",
+                  padding: 12,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "#D4AF37",
+                  fontWeight: 900,
+                  textDecoration: "none",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {label}
+                <div style={{ marginTop: 4, fontSize: 12, opacity: 0.75, color: "rgba(255,255,255,0.8)" }}>{url}</div>
+              </a>
+            );
+          })}
         </div>
       ) : null}
 
