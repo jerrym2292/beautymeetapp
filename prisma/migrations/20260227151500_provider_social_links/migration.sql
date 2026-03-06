@@ -1,3 +1,3 @@
 -- Add social links to Provider
-ALTER TABLE "Provider" ADD COLUMN IF NOT EXISTS "facebook" TEXT;
-ALTER TABLE "Provider" ADD COLUMN IF NOT EXISTS "tiktok" TEXT;
+ALTER TABLE "Provider" ADD COLUMN "facebook" TEXT;
+ALTER TABLE "Provider" ADD COLUMN "tiktok" TEXT;
