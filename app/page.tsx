@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import HeroSearch from "@/app/components/HeroSearch";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -20,10 +19,6 @@ export default async function HomePage() {
             <Link href="/book" style={primaryButton}>Find an Artist</Link>
             {!user && <Link href="/login" style={secondaryButton}>Partner Login</Link>}
             {user && <Link href={user.role === "AFFILIATE" ? "/affiliate/dashboard" : user.role === "ADMIN" ? "/admin" : user.providerId ? `/tech/${user.providerId}` : "/tech/dashboard"} style={secondaryButton}>My Dashboard</Link>}
-          </div>
-
-          <div style={{ marginTop: 16, maxWidth: 640 }}>
-            <HeroSearch />
           </div>
         </div>
       </header>
@@ -125,7 +120,7 @@ export default async function HomePage() {
       <section style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         <div style={ctaBox}>
           <h2 style={{ fontSize: 24, marginBottom: 12 }}>Need an Appointment?</h2>
-          <p style={{ opacity: 0.8, marginBottom: 20 }}>Book top artists near you with transparent pricing and secure deposits.</p>
+          <p style={{ opacity: 0.8, marginBottom: 20 }}>Join the thousands of locals booking through Beauty Meet.</p>
           <Link href="/book" style={ctaButton}>Book Now</Link>
         </div>
 

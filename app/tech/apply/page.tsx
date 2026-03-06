@@ -7,9 +7,24 @@ export default function TechApplyPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [dob, setDob] = useState("");
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [licenseState, setLicenseState] = useState("");
+
+  // Categories + license details
+  const [catNails, setCatNails] = useState(false);
+  const [catLashes, setCatLashes] = useState(false);
+  const [catHair, setCatHair] = useState(false);
+
+  const [nailsLicenseState, setNailsLicenseState] = useState("");
+  const [nailsLicenseNumber, setNailsLicenseNumber] = useState("");
+
+  const [lashesLicenseState, setLashesLicenseState] = useState("");
+  const [lashesLicenseNumber, setLashesLicenseNumber] = useState("");
+
+  const [hairLicenseState, setHairLicenseState] = useState("");
+  const [hairLicenseNumber, setHairLicenseNumber] = useState("");
+
+  const [verificationResult, setVerificationResult] = useState<any[] | null>(
+    null
+  );
 
   // Hidden from public
   const [address1, setAddress1] = useState("");
@@ -18,64 +33,76 @@ export default function TechApplyPage() {
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
 
-  const [licenseFile, setLicenseFile] = useState<File | null>(null);
-  const [idFile, setIdFile] = useState<File | null>(null);
-
   const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error"
   >("idle");
   const [error, setError] = useState<string | null>(null);
 
-  async function uploadOne(file: File) {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/apply/upload", { method: "POST", body: fd });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(j?.error || "Upload failed");
-    return j?.url as string;
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("submitting");
     setError(null);
+    setVerificationResult(null);
 
-    try {
-      const licenseUrl = licenseFile ? await uploadOne(licenseFile) : null;
-      const idUrl = idFile ? await uploadOne(idFile) : null;
+    const appliedCategories: Array<"NAILS" | "LASHES_BROWS" | "HAIR"> = [];
+    const categoryLicenses: Array<{
+      category: "NAILS" | "LASHES_BROWS" | "HAIR";
+      licenseState: string;
+      licenseNumber: string;
+    }> = [];
 
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          fullName,
-          phone,
-          email: email || null,
-          dob: dob || null,
-          licenseNumber: licenseNumber || null,
-          licenseState: licenseState.toUpperCase() || null,
-          licenseUrl,
-          idUrl,
-          address1,
-          address2: address2 || null,
-          city,
-          state: state.toUpperCase(),
-          zip,
-        }),
+    if (catNails) {
+      appliedCategories.push("NAILS");
+      categoryLicenses.push({
+        category: "NAILS",
+        licenseState: nailsLicenseState.toUpperCase(),
+        licenseNumber: nailsLicenseNumber,
       });
-
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(j?.error || "Something went wrong.");
-        setStatus("error");
-        return;
-      }
-
-      setStatus("success");
-    } catch (err: any) {
-      setError(String(err?.message || err));
-      setStatus("error");
     }
+    if (catLashes) {
+      appliedCategories.push("LASHES_BROWS");
+      categoryLicenses.push({
+        category: "LASHES_BROWS",
+        licenseState: lashesLicenseState.toUpperCase(),
+        licenseNumber: lashesLicenseNumber,
+      });
+    }
+    if (catHair) {
+      appliedCategories.push("HAIR");
+      categoryLicenses.push({
+        category: "HAIR",
+        licenseState: hairLicenseState.toUpperCase(),
+        licenseNumber: hairLicenseNumber,
+      });
+    }
+
+    const res = await fetch("/api/apply", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        fullName,
+        phone,
+        email: email || null,
+        appliedCategories,
+        categoryLicenses,
+        address1,
+        address2: address2 || null,
+        city,
+        state: state.toUpperCase(),
+        zip,
+      }),
+    });
+
+    const j = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setError(j?.error || "Something went wrong.");
+      setStatus("error");
+      return;
+    }
+
+    if (Array.isArray(j?.verification)) setVerificationResult(j.verification);
+    setStatus("success");
   }
 
   return (
@@ -90,6 +117,11 @@ export default function TechApplyPage() {
         marketplace clean.
       </p>
 
+      <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75, lineHeight: 1.35 }}>
+        License auto-lookup is currently <b>NY only</b> (more states next). If we
+        can’t verify automatically, you can still submit—admin will review.
+      </div>
+
       {status === "success" ? (
         <div
           style={{
@@ -100,7 +132,21 @@ export default function TechApplyPage() {
             border: "1px solid rgba(34,197,94,0.35)",
           }}
         >
-          Application submitted. You’ll get an SMS when approved.
+          <div>Application submitted. You’ll get an SMS when approved.</div>
+          {verificationResult ? (
+            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                License auto-check results
+              </div>
+              {verificationResult.map((r, idx) => (
+                <div key={idx} style={{ marginTop: 6 }}>
+                  <b>{r.category}</b>: {r.state} {r.licenseNumber} —{" "}
+                  {r.valid ? "VERIFIED" : "NEEDS MANUAL"}
+                  {r.providerName ? ` (${r.providerName})` : ""}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : (
         <form onSubmit={onSubmit} style={{ marginTop: 16 }}>
@@ -133,66 +179,55 @@ export default function TechApplyPage() {
             />
           </Field>
 
-          <Field label="Date of Birth">
-            <input
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </Field>
-
-          <div style={{ marginTop: 16, fontWeight: 800 }}>
-            Licensing
-          </div>
+          <div style={{ marginTop: 18, fontWeight: 800 }}>What are you licensed for?</div>
           <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-            We use this to verify your cosmetology/nail technician license.
+            Pick all that apply. Enter the license state + number for each.
           </div>
 
-          <Field label="License Number">
-            <input
-              value={licenseNumber}
-              onChange={(e) => setLicenseNumber(e.target.value)}
-              required
-              style={inputStyle}
-              placeholder="e.g. CO0123456"
-            />
-          </Field>
+          <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+            <input type="checkbox" checked={catNails} onChange={(e) => setCatNails(e.target.checked)} />
+            <span>NAILS</span>
+          </label>
+          {catNails ? (
+            <div style={{ marginTop: 8, padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)" }}>
+              <Field label="Nails license state (2 letters)">
+                <input value={nailsLicenseState} onChange={(e)=>setNailsLicenseState(e.target.value)} required style={inputStyle} placeholder="NY" maxLength={2} />
+              </Field>
+              <Field label="Nails license number">
+                <input value={nailsLicenseNumber} onChange={(e)=>setNailsLicenseNumber(e.target.value)} required style={inputStyle} placeholder="123456" />
+              </Field>
+            </div>
+          ) : null}
 
-          <Field label="License State">
-            <input
-              value={licenseState}
-              onChange={(e) => setLicenseState(e.target.value)}
-              required
-              style={inputStyle}
-              placeholder="GA"
-              maxLength={2}
-            />
-          </Field>
+          <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+            <input type="checkbox" checked={catLashes} onChange={(e) => setCatLashes(e.target.checked)} />
+            <span>LASHES / BROWS</span>
+          </label>
+          {catLashes ? (
+            <div style={{ marginTop: 8, padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)" }}>
+              <Field label="Lashes/Brows license state (2 letters)">
+                <input value={lashesLicenseState} onChange={(e)=>setLashesLicenseState(e.target.value)} required style={inputStyle} placeholder="NY" maxLength={2} />
+              </Field>
+              <Field label="Lashes/Brows license number">
+                <input value={lashesLicenseNumber} onChange={(e)=>setLashesLicenseNumber(e.target.value)} required style={inputStyle} placeholder="123456" />
+              </Field>
+            </div>
+          ) : null}
 
-          <div style={{ marginTop: 16, fontWeight: 800 }}>Uploads (recommended)</div>
-          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-            Upload a clear photo/PDF of your license and a government-issued ID.
-          </div>
-
-          <Field label="License upload (photo/PDF)">
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field label="ID upload (photo/PDF)">
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-              style={inputStyle}
-            />
-          </Field>
+          <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+            <input type="checkbox" checked={catHair} onChange={(e) => setCatHair(e.target.checked)} />
+            <span>HAIR</span>
+          </label>
+          {catHair ? (
+            <div style={{ marginTop: 8, padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)" }}>
+              <Field label="Hair license state (2 letters)">
+                <input value={hairLicenseState} onChange={(e)=>setHairLicenseState(e.target.value)} required style={inputStyle} placeholder="NY" maxLength={2} />
+              </Field>
+              <Field label="Hair license number">
+                <input value={hairLicenseNumber} onChange={(e)=>setHairLicenseNumber(e.target.value)} required style={inputStyle} placeholder="123456" />
+              </Field>
+            </div>
+          ) : null}
 
           <div style={{ marginTop: 16, fontWeight: 800 }}>
             Address (hidden from public)

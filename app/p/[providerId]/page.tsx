@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import PortfolioMasonry from "./PortfolioMasonry";
+import VisualCalendar from "./VisualCalendar";
 
 type IntakeQuestion = {
   id: string;
@@ -13,20 +15,19 @@ type IntakeQuestion = {
 type Provider = {
   id: string;
   displayName: string;
-  avatarUrl: string | null;
-  bio: string | null;
-  instagram: string | null;
-  facebook: string | null;
-  tiktok: string | null;
   mode: "FIXED" | "MOBILE" | "BOTH";
   maxTravelMiles: number | null;
   travelRateCents: number;
-  services: {
-    id: string;
-    name: string;
-    durationMin: number;
-    priceCents: number;
+  portfolioUrlsJson: string | null;
+  kitEquipmentJson: string | null; // Added
+  instagram: string | null;
+  services: { 
+    id: string; 
+    name: string; 
+    durationMin: number; 
+    priceCents: number; 
     category: string;
+    prepInstructions: string | null; // Added
     questions: IntakeQuestion[];
   }[];
 };
@@ -52,24 +53,14 @@ export default function ProviderBookingPage({
   const [phone, setPhone] = useState("");
   const [customerZip, setCustomerZip] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
-
-  const [date, setDate] = useState<string>(todayStr);
-  const [time, setTime] = useState<string>("");
-
+  const [startAt, setStartAt] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [notes, setNotes] = useState("");
-  const [referralCode, setReferralCode] = useState("");
   const [intakeAnswers, setIntakeAnswers] = useState<Record<string, string>>({});
 
-  const [submitStatus, setSubmitStatus] = useState<"idle"|"submitting"|"success"|"error">("idle");
+  const [submitStatus, setSubmitStatus] = useState<"idle"|"submitting"|"success"|"error"|"waitlist">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showWaitlist, setShowWaitlist] = useState(false);
 
   useEffect(() => {
     if (!providerId) return;
@@ -87,70 +78,24 @@ export default function ProviderBookingPage({
 
   const selectedService = useMemo(() => provider?.services.find(s => s.id === serviceId) || null, [provider, serviceId]);
 
-  const [busy, setBusy] = useState<Array<{ startAt: string; endAt: string }>>([]);
-  const [slots, setSlots] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!providerId || !date) return;
-    (async () => {
-      const res = await fetch(`/api/providers/${providerId}/availability?date=${encodeURIComponent(date)}`);
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setBusy([]);
-        return;
-      }
-      setBusy(j.busy || []);
-    })();
-  }, [providerId, date]);
-
-  useEffect(() => {
-    const durMin = selectedService?.durationMin || 60;
-    // Build 30-minute slots from 9:00 to 19:00 (end exclusive)
-    const startMin = 9 * 60;
-    const endMin = 19 * 60;
-
-    function toMinutes(hhmm: string) {
-      const [hh, mm] = hhmm.split(":").map(Number);
-      return hh * 60 + mm;
+  async function joinWaitlist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fullName || !phone) {
+      alert("Please enter your name and phone first.");
+      return;
     }
-
-    // Convert busy intervals to minutes within the selected date in local time
-    const busyRanges = busy
-      .map((b) => ({
-        s: new Date(b.startAt),
-        e: new Date(b.endAt),
-      }))
-      .filter((r) => {
-        const d = new Date(date + "T00:00:00");
-        return r.s >= d && r.s < new Date(d.getTime() + 24 * 60 * 60 * 1000);
-      })
-      .map((r) => {
-        const s = r.s.getHours() * 60 + r.s.getMinutes();
-        const e = r.e.getHours() * 60 + r.e.getMinutes();
-        return { s, e };
-      });
-
-    const out: string[] = [];
-    for (let m = startMin; m + durMin <= endMin; m += 30) {
-      const hh = String(Math.floor(m / 60)).padStart(2, "0");
-      const mm = String(m % 60).padStart(2, "0");
-      const t = `${hh}:${mm}`;
-      const slotStart = toMinutes(t);
-      const slotEnd = slotStart + durMin;
-
-      const overlaps = busyRanges.some((r) => slotStart < r.e && slotEnd > r.s);
-      if (!overlaps) out.push(t);
+    setSubmitStatus("submitting");
+    const res = await fetch(`/api/waitlist`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerId, fullName, phone, serviceId })
+    });
+    if (res.ok) setSubmitStatus("waitlist");
+    else {
+      setSubmitStatus("error");
+      setSubmitError("Failed to join waitlist.");
     }
-
-    setSlots(out);
-    // reset time if it's no longer valid
-    if (time && !out.includes(time)) setTime("");
-  }, [busy, selectedService, date]);
-
-  const startAt = useMemo(() => {
-    if (!date || !time) return "";
-    return `${date} ${time}`;
-  }, [date, time]);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -169,7 +114,6 @@ export default function ProviderBookingPage({
         startAt, 
         isMobile, 
         notes: notes || null,
-        referralCode: referralCode.trim() || null,
         intakeAnswers: Object.entries(intakeAnswers).map(([questionId, text]) => ({ questionId, text }))
       }),
     });
@@ -201,75 +145,44 @@ export default function ProviderBookingPage({
         <div style={{ marginTop: 14, opacity: 0.85 }}>Loading…</div>
       ) : (
         <>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-            {provider.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={provider.avatarUrl}
-                alt={`${provider.displayName} profile photo`}
-                style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", border: "1px solid rgba(255,255,255,0.12)" }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 900,
-                }}
-              >
-                {provider.displayName.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-
-            <div>
-              <h1 style={{ margin: 0 }}>{provider.displayName}</h1>
-              <div style={{ opacity: 0.8, marginTop: 4 }}>
-                {provider.mode}{provider.maxTravelMiles ? ` • Mobile up to ${provider.maxTravelMiles} miles` : ""}
-              </div>
-            </div>
+          <h1 style={{ marginTop: 12 }}>{provider.displayName}</h1>
+          <div style={{ opacity: 0.8, marginTop: 4 }}>
+            {provider.mode}{provider.maxTravelMiles ? ` • Mobile up to ${provider.maxTravelMiles} miles` : ""}
           </div>
 
-          {(provider.bio || provider.instagram || provider.facebook || provider.tiktok) ? (
-            <section style={{ marginTop: 14, ...card }}>
-              <div style={{ fontWeight: 800, marginBottom: 6 }}>About</div>
-              {provider.bio ? (
-                <div style={{ opacity: 0.85, fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                  {provider.bio}
-                </div>
-              ) : null}
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-                {provider.instagram ? (
-                  <a href={normalizeUrl(provider.instagram)} target="_blank" rel="noreferrer" style={socialLink}>
-                    Instagram
-                  </a>
-                ) : null}
-                {provider.facebook ? (
-                  <a href={normalizeUrl(provider.facebook)} target="_blank" rel="noreferrer" style={socialLink}>
-                    Facebook
-                  </a>
-                ) : null}
-                {provider.tiktok ? (
-                  <a href={normalizeUrl(provider.tiktok)} target="_blank" rel="noreferrer" style={socialLink}>
-                    TikTok
-                  </a>
-                ) : null}
+          {provider.kitEquipmentJson && (
+            <div style={{ marginTop: 12, padding: 12, background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#D4AF37", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                🧳 Mobile Suite Equipment
               </div>
-            </section>
-          ) : null}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {JSON.parse(provider.kitEquipmentJson).map((item: string, i: number) => (
+                  <span key={i} style={{ fontSize: 11, background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <PortfolioMasonry photosJson={provider.portfolioUrlsJson} />
 
           {submitStatus === 'success' ? (
             <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)" }}>
               Booking request sent. You’ll get an SMS when it’s approved or declined.
             </div>
+          ) : submitStatus === 'waitlist' ? (
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: "rgba(212,175,55,0.10)", border: "1px solid rgba(212,175,55,0.35)", color: "#D4AF37" }}>
+              You've been added to the waitlist! We'll notify you if an opening comes up.
+            </div>
           ) : (
             <form onSubmit={submit} style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+              <div style={{ padding: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 }}>
+                <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 8 }}>Can't find a time that works?</div>
+                <button type="button" onClick={joinWaitlist} style={{ ...btn, background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)", fontSize: 12 }}>
+                  ✨ Join the Priority Waitlist
+                </button>
+              </div>
               <Field label="Your name">
                 <input value={fullName} onChange={(e)=>setFullName(e.target.value)} required style={input} />
               </Field>
@@ -286,6 +199,14 @@ export default function ProviderBookingPage({
                   ))}
                 </select>
               </Field>
+
+              {/* Service Prep Instructions (Glamsquad-style) */}
+              {selectedService?.prepInstructions && (
+                <div style={{ padding: 12, background: "rgba(212,175,55,0.08)", border: "1px dashed rgba(212,175,55,0.4)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#D4AF37", marginBottom: 6 }}>✨ Service Prep Guide</div>
+                  <div style={{ fontSize: 12, opacity: 0.9, lineHeight: 1.4 }}>{selectedService.prepInstructions}</div>
+                </div>
+              )}
 
               {/* Dynamic Intake Questions */}
               {selectedService?.questions && selectedService.questions.length > 0 && (
@@ -317,32 +238,25 @@ export default function ProviderBookingPage({
                 </div>
               )}
 
-              <Field label="Date">
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  style={input}
-                />
-              </Field>
-
-              <Field label="Time">
-                <select
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  required
-                  style={input as any}
-                >
-                  <option value="">Select a time…</option>
-                  {slots.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                  30-minute slots • default hours 9:00–19:00
+              <Field label="Requested date/time">
+                <div style={{ display: "grid", gap: 12 }}>
+                  <VisualCalendar 
+                    selectedDate={startAt ? new Date(startAt) : undefined}
+                    onSelect={(d) => {
+                      const time = startAt.includes(" ") ? startAt.split(" ")[1] : "10:00";
+                      setStartAt(`${d.toISOString().split('T')[0]} ${time}`);
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <input 
+                      value={startAt} 
+                      onChange={(e)=>setStartAt(e.target.value)} 
+                      required 
+                      style={input} 
+                      placeholder="YYYY-MM-DD HH:MM" 
+                    />
+                    <div style={{ fontSize: 11, opacity: 0.5, whiteSpace: "nowrap" }}>or type manually</div>
+                  </div>
                 </div>
               </Field>
 
@@ -350,10 +264,6 @@ export default function ProviderBookingPage({
                 <input type="checkbox" checked={isMobile} onChange={(e)=>setIsMobile(e.target.checked)} />
                 <span>Mobile appointment (adds $1/mile travel fee estimate)</span>
               </label>
-
-              <Field label="Referral code (optional)">
-                <input value={referralCode} onChange={(e)=>setReferralCode(e.target.value)} style={input} placeholder="Friend's code" />
-              </Field>
 
               <Field label="Notes (optional)">
                 <input value={notes} onChange={(e)=>setNotes(e.target.value)} style={input} />
@@ -364,14 +274,14 @@ export default function ProviderBookingPage({
                   <div style={{ fontSize: 20 }}>🛡️</div>
                   <div style={{ fontSize: 13, lineHeight: 1.4 }}>
                     <div style={{ fontWeight: 800, color: "#4ade80", marginBottom: 2 }}>Secure Escrow Protection</div>
-                    You pay a <b>25% deposit</b> to secure your appointment. The remaining balance is only charged once the service is confirmed as completed.
+                    Your full payment is <b>authorized and held securely</b>. Funds are only released to the professional once the service is confirmed as completed.
                   </div>
                 </div>
               ) : null}
 
               {selectedService ? (
                 <div style={{ opacity: 0.85, fontSize: 12, lineHeight: 1.35, padding: "0 4px" }}>
-                  Security deposit is <b>25%</b>. Platform fee is <b>5%</b>. Travel fee (if mobile) is <b>$1/mile</b> (ZIP estimate).
+                  Security deposit is <b>20%</b>. Platform fee is <b>5%</b>. Travel fee (if mobile) is <b>$1/mile</b> (ZIP estimate).
                 </div>
               ) : null}
 
@@ -383,6 +293,34 @@ export default function ProviderBookingPage({
                 {submitStatus==='submitting' ? 'Sending…' : 'Request booking'}
               </button>
             </form>
+          )}
+
+          {submitStatus !== 'success' && (
+            <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20 }}>
+              <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 12 }}>Can't find a time that works?</div>
+              <button 
+                onClick={() => setShowWaitlist(!showWaitlist)}
+                style={{ ...btn, background: 'rgba(212,175,55,0.05)', borderColor: 'rgba(212,175,55,0.3)', color: '#D4AF37', width: 'auto', padding: '8px 20px' }}
+              >
+                {showWaitlist ? "Close Waitlist" : "Join the Waitlist"}
+              </button>
+
+              {showWaitlist && (
+                <form onSubmit={joinWaitlist} style={{ marginTop: 16, display: 'grid', gap: 12, textAlign: 'left', padding: 14, background: 'rgba(212,175,55,0.03)', borderRadius: 14, border: '1px dashed rgba(212,175,55,0.2)' }}>
+                   <div style={{ fontWeight: 800, color: "#D4AF37", fontSize: 14 }}>Join the Elite Waitlist</div>
+                   <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>We'll text you the second an opening appears.</div>
+                   <Field label="Name">
+                     <input value={fullName} onChange={(e)=>setFullName(e.target.value)} required style={input} />
+                   </Field>
+                   <Field label="Phone">
+                     <input value={phone} onChange={(e)=>setPhone(e.target.value)} required style={input} />
+                   </Field>
+                   <button style={btn} type="submit" disabled={submitStatus==='submitting'}>
+                     {submitStatus==='submitting' ? 'Joining...' : 'Get Notified'}
+                   </button>
+                </form>
+              )}
+            </div>
           )}
         </>
       )}
@@ -408,33 +346,6 @@ const input: React.CSSProperties = {
   color: "#f5f5f7",
   outline: "none",
 };
-
-const card: React.CSSProperties = {
-  padding: 14,
-  borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.10)",
-  background: "rgba(255,255,255,0.04)",
-};
-
-const socialLink: React.CSSProperties = {
-  padding: "8px 10px",
-  borderRadius: 10,
-  border: "1px solid rgba(212,175,55,0.35)",
-  background: "rgba(212,175,55,0.12)",
-  color: "#D4AF37",
-  textDecoration: "none",
-  fontWeight: 800,
-  fontSize: 13,
-};
-
-function normalizeUrl(v: string) {
-  const s = (v || "").trim();
-  if (!s) return s;
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-  // If they paste a handle like @name, strip @ and treat as https.
-  const cleaned = s.startsWith("@");
-  return `https://${(cleaned ? s.slice(1) : s)}`;
-}
 
 const btn: React.CSSProperties = {
   padding: "10px 12px",

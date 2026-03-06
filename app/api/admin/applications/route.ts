@@ -25,6 +25,11 @@ export async function GET(req: Request) {
       licenseUrl: true,
       idUrl: true,
       status: true,
+      verificationStatus: true,
+      verificationDetailsJson: true,
+      categoryLicensesJson: true,
+      appliedCategoriesJson: true,
+      zip: true,
     },
   });
 

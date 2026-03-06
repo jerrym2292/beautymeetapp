@@ -9,12 +9,12 @@ type AppRow = {
   fullName: string;
   phone: string;
   email: string | null;
-  dob: string | null;
-  licenseNumber: string | null;
-  licenseState: string | null;
-  licenseUrl: string | null;
-  idUrl: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  verificationStatus: string | null;
+  verificationDetailsJson: string | null;
+  categoryLicensesJson: string | null;
+  appliedCategoriesJson: string | null;
+  zip: string | null;
 };
 
 export default function AdminClient() {
@@ -40,16 +40,16 @@ export default function AdminClient() {
     load();
   }, []);
 
-  async function approve(appId: string) {
-    const displayName = prompt("Display name for provider (shown to customers):");
+  async function approve(a: AppRow) {
+    const displayName = prompt("Display name for provider (shown to customers):", a.fullName);
     if (!displayName) return;
-    const baseZip = prompt("Provider base ZIP:") || "";
+    const baseZip = prompt("Provider base ZIP:", a.zip || "");
     if (!baseZip) return;
 
     const res = await fetch(`/api/admin/approve`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ appId, displayName, baseZip }),
+      body: JSON.stringify({ appId: a.id, displayName, baseZip }),
     });
 
     const j = await res.json().catch(() => ({}));
@@ -102,37 +102,37 @@ export default function AdminClient() {
               <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
                 {a.phone} {a.email ? `• ${a.email}` : ""}
               </div>
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                DOB: {a.dob ? new Date(a.dob).toLocaleDateString() : "N/A"}
-              </div>
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                License: <b>{a.licenseNumber || "N/A"}</b> ({a.licenseState || "N/A"})
-              </div>
               <div style={{ opacity: 0.7, fontSize: 12, marginTop: 4 }}>
                 Submitted: {new Date(a.createdAt).toLocaleString()}
               </div>
 
-              {(a.licenseUrl || a.idUrl) ? (
-                <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
-                  {a.licenseUrl ? (
-                    <a href={a.licenseUrl} target="_blank" rel="noreferrer" style={{ color: "#D4AF37", fontSize: 13 }}>
-                      View license upload
-                    </a>
-                  ) : null}
-                  {a.idUrl ? (
-                    <a href={a.idUrl} target="_blank" rel="noreferrer" style={{ color: "#D4AF37", fontSize: 13 }}>
-                      View ID upload
-                    </a>
-                  ) : null}
+              {a.verificationStatus ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 8,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    background: a.verificationStatus === "VERIFIED" ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)",
+                    border: `1px solid ${a.verificationStatus === "VERIFIED" ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                    color: a.verificationStatus === "VERIFIED" ? "#86efac" : "#fcd34d",
+                  }}
+                >
+                  <strong>Verification: {a.verificationStatus}</strong>
+                  {a.verificationDetailsJson && (
+                    <div style={{ marginTop: 4, opacity: 0.9, whiteSpace: "pre-wrap" }}>
+                      {a.verificationDetailsJson}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.65 }}>
-                  No uploads yet.
+                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.5, fontStyle: "italic" }}>
+                  No auto-verification record found.
                 </div>
               )}
 
               <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                <button onClick={() => approve(a.id)} style={{ ...buttonStyle, flex: 1 }}>
+                <button onClick={() => approve(a)} style={{ ...buttonStyle, flex: 1 }}>
                   Approve
                 </button>
                 <button

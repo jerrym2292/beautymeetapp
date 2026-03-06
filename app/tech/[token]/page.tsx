@@ -2,7 +2,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import IntakeFormManager from "./IntakeFormManager";
 import ModeToggle from "./ModeToggle";
-import ConfirmForm from "./ConfirmForm";
+import DashboardTabs from "./DashboardTabs";
+import PortfolioManager from "./PortfolioManager";
+import TravelZoneManager from "./TravelZoneManager";
+import ClientListTab from "./ClientListTab";
+import MarketingTab from "./MarketingTab";
+import EarningsTab from "./EarningsTab";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +26,8 @@ export default async function TechDashboard({
         include: { questions: true }
       },
       bookings: {
-        orderBy: { startAt: "desc" },
-        include: {
-          customer: true,
-          service: true,
-          payments: { orderBy: { createdAt: "desc" } },
-          intakeAnswers: { include: { question: true } },
-        },
-        // For MVP we load all for tax/history; add pagination later if needed.
+        orderBy: { createdAt: "desc" },
+        include: { customer: true, service: true, intakeAnswers: { include: { question: true } } },
       },
     },
   });
@@ -45,371 +44,400 @@ export default async function TechDashboard({
     );
   }
 
+  // Group bookings by customer to build a client list
+  const clientsMap = new Map();
+  provider.bookings.forEach(b => {
+    if (!clientsMap.has(b.customer.id)) {
+      clientsMap.set(b.customer.id, {
+        id: b.customer.id,
+        fullName: b.customer.fullName,
+        phone: b.customer.phone,
+        email: b.customer.email,
+        totalBookings: 0,
+        lastBookingAt: b.startAt,
+      });
+    }
+    const c = clientsMap.get(b.customer.id);
+    c.totalBookings++;
+    if (new Date(b.startAt) > new Date(c.lastBookingAt)) {
+      c.lastBookingAt = b.startAt;
+    }
+  });
+  const clientList = Array.from(clientsMap.values());
+
   return (
-    <main>
-      <Link href="/" style={{ color: "#D4AF37" }}>
+    <main style={mainContainer}>
+      <Link href="/" style={{ color: "#D4AF37", textDecoration: "none", fontSize: 14 }}>
         ← Home
       </Link>
-      <h1 style={{ marginTop: 12 }}>Tech dashboard</h1>
-      <div style={{ opacity: 0.8, marginTop: 4 }}>
-        Provider: <b>{provider.displayName}</b>
+      
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 20 }}>
+        <div>
+           <h1 style={{ margin: 0, fontSize: 28, letterSpacing: "-0.02em" }}>Tech Dashboard</h1>
+           <div style={{ color: "#D4AF37", fontWeight: 600, marginTop: 4, opacity: 0.9 }}>
+             {provider.displayName}
+           </div>
+           <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+             <Link
+               href={`/tech/${provider.accessToken}/availability`}
+               style={{
+                 fontSize: 12,
+                 fontWeight: 900,
+                 border: "1px solid rgba(212,175,55,0.35)",
+                 background: "rgba(212,175,55,0.10)",
+                 color: "#D4AF37",
+                 padding: "8px 10px",
+                 borderRadius: 14,
+                 textDecoration: "none",
+               }}
+             >
+               Availability →
+             </Link>
+           </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.1em" }}>Subscription</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: provider.subscriptionActive ? "#4ade80" : "#fb7185" }}>
+            {provider.subscriptionActive ? "ELITE ACTIVE" : "INACTIVE"}
+          </div>
+        </div>
       </div>
 
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Service Mode</div>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-          Choose how you want to work (Studio, Mobile, or Both). 
-          Travel is charged at $1/mile.
-        </div>
-        <ModeToggle token={token} initialMode={provider.mode} />
-      </section>
-
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Work Mode</div>
-        <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-          Current: <b>{provider.mode === "BOTH" ? "In-Studio & Mobile" : provider.mode === "MOBILE" ? "Mobile Only" : "In-Studio Only"}</b>
-        </div>
-        <form action={`/api/provider/${provider.accessToken}/mode`} method="post" style={{ marginTop: 10, display: "flex", gap: 8 }}>
-          <select name="mode" defaultValue={provider.mode} style={{ ...input, flex: 1 }}>
-            <option value="FIXED">In-Studio Only</option>
-            <option value="MOBILE">Mobile Only</option>
-            <option value="BOTH">In-Studio & Mobile</option>
-          </select>
-          <button style={{ ...btn, width: "auto" }} type="submit">Update</button>
-        </form>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-          This determines if customers see the mobile booking option.
-        </div>
-      </section>
-
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Subscription</div>
-        <div style={{ opacity: 0.8, marginTop: 6, fontSize: 13, lineHeight: 1.35 }}>
-          Status: {provider.subscriptionActive ? (
-            <b style={{ color: "#4ade80" }}>Subscribed (visible to customers)</b>
-          ) : (
-            <b style={{ color: "#f87171" }}>Unsubscribed (hidden)</b>
-          )}
-        </div>
-
-        {provider.subscriptionActive ? (
-          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-            <form action={`/api/provider/${provider.accessToken}/subscription/portal`} method="post">
-              <button style={btn} type="submit">Manage billing (Stripe portal)</button>
-            </form>
-
-            <ConfirmForm
-              action={`/api/provider/${provider.accessToken}/subscription`}
-              method="post"
-              confirmText="Are you sure you want to unsubscribe? Your profile will become invisible to customers and you will stop receiving new bookings."
-            >
-              <input type="hidden" name="action" value="unsubscribe" />
-              <button
-                style={{
-                  ...btn,
-                  borderColor: "rgba(248,113,113,0.5)",
-                  background: "rgba(248,113,113,0.12)",
-                }}
-                type="submit"
-              >
-                Unsubscribe (cancel + hide)
-              </button>
-            </ConfirmForm>
-          </div>
-        ) : (
-          <form action={`/api/provider/${provider.accessToken}/subscription/start`} method="post" style={{ marginTop: 10 }}>
-            <button style={btn} type="submit">Subscribe (Stripe)</button>
-          </form>
-        )}
-
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-          Subscription controls your visibility to customers.
-        </div>
-      </section>
-
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Payments (Stripe)</div>
-        <div style={{ opacity: 0.8, marginTop: 6, fontSize: 13, lineHeight: 1.35 }}>
-          Status: {provider.stripeAccountId ? (
-            <>
-              connected • charges {provider.stripeChargesEnabled ? "enabled" : "pending"} • payouts {provider.stripePayoutsEnabled ? "enabled" : "pending"}
-            </>
-          ) : (
-            <>not connected</>
-          )}
-        </div>
-        <form action={`/api/provider/${provider.accessToken}/stripe/onboard`} method="post" style={{ marginTop: 10 }}>
-          <button style={btn} type="submit">
-            {provider.stripeAccountId ? "Continue Stripe onboarding" : "Connect Stripe (Express)"}
-          </button>
-        </form>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-          You must complete Stripe onboarding before customers can pay.
-        </div>
-      </section>
-
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Public booking link</div>
-        <div style={{ opacity: 0.85, marginTop: 6 }}>
-          <a style={{ color: "#D4AF37" }} href={`/p/${provider.id}`}>
-            /p/{provider.id}
-          </a>
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-          Customers can request appointments here.
-        </div>
-      </section>
-
-      <section style={card}>
-        <div style={{ fontWeight: 800 }}>Public Profile</div>
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-          Your bio + socials + profile photo show on your public booking page.
-        </div>
-
-        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-          <form action={`/api/provider/${provider.accessToken}/avatar`} method="post" encType="multipart/form-data">
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <input name="file" type="file" accept="image/*" style={{ ...input, width: "auto" }} />
-              <button style={{ ...btn, width: "auto" }} type="submit">Upload profile photo</button>
-            </div>
-          </form>
-
-          {(provider as any).avatarUrl ? (
-            <ConfirmForm
-              action={`/api/provider/${provider.accessToken}/avatar`}
-              method="post"
-              confirmText="Remove your profile photo?"
-            >
-              <input type="hidden" name="clear" value="1" />
-              <button style={{ ...btn, width: "auto", borderColor: "rgba(248,113,113,0.5)", background: "rgba(248,113,113,0.12)" }} type="submit">
-                Remove photo
-              </button>
-            </ConfirmForm>
-          ) : null}
-        </div>
-
-        <form action={`/api/provider/${provider.accessToken}/profile`} method="post" style={{ marginTop: 12, display: "grid", gap: 10 }}>
-          <textarea
-            name="bio"
-            defaultValue={provider.bio || ""}
-            placeholder="Short bio (optional)"
-            style={{ ...input, minHeight: 90 }}
-          />
-          <input
-            name="instagram"
-            defaultValue={(provider as any).instagram || ""}
-            placeholder="Instagram link (optional)"
-            style={input}
-          />
-          <input
-            name="facebook"
-            defaultValue={(provider as any).facebook || ""}
-            placeholder="Facebook link (optional)"
-            style={input}
-          />
-          <input
-            name="tiktok"
-            defaultValue={(provider as any).tiktok || ""}
-            placeholder="TikTok link (optional)"
-            style={input}
-          />
-          <button style={btn} type="submit">Save profile</button>
-        </form>
-      </section>
-
-      <section style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <div style={{ fontWeight: 800 }}>Services</div>
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-              Add lashes/brows + nail services with durations and prices.
-            </div>
-          </div>
-          <form action={`/api/provider/${provider.accessToken}/service`} method="post">
-            <button style={btn} type="submit" name="quick" value="1">
-              + Quick add templates
-            </button>
-          </form>
-        </div>
-
-        <form
-          action={`/api/provider/${provider.accessToken}/service`}
-          method="post"
-          style={{ display: "grid", gap: 10, marginTop: 12 }}
-        >
-          <input name="name" required placeholder="Service name" style={input} />
-          <select name="category" required style={input as any} defaultValue="LASHES_BROWS">
-            <option value="LASHES_BROWS">Lashes/Brows</option>
-            <option value="NAILS">Nails</option>
-          </select>
-          <input
-            name="durationMin"
-            required
-            placeholder="Duration (minutes)"
-            style={input}
-            inputMode="numeric"
-          />
-          <input
-            name="price"
-            required
-            placeholder="Price (e.g. 120)"
-            style={input}
-            inputMode="decimal"
-          />
-          <button style={btn} type="submit">
-            Add service
-          </button>
-        </form>
-
-        <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-          {provider.services.map((s) => (
-            <div key={s.id} style={{ ...card, marginTop: 0 }}>
-              <div style={{ fontWeight: 800 }}>{s.name}</div>
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                {s.category} • {s.durationMin} min • ${(s.priceCents / 100).toFixed(2)}
+      <DashboardTabs 
+        bookingsCount={provider.bookings.length} 
+        servicesCount={provider.services.length}
+      >
+        {{
+          bookings: (
+            <section style={glassCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>Recent Activity</div>
+                <div style={{ fontSize: 12, opacity: 0.6 }}>{provider.bookings.length} Total</div>
               </div>
-              
-              <IntakeFormManager token={token} serviceId={s.id} initialQuestions={s.questions} />
+              <div style={{ display: "grid", gap: 12 }}>
+                {provider.bookings.map((b) => (
+                  <div key={b.id} style={itemCard}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 15 }}>{b.customer.fullName}</div>
+                        <div style={{ color: "#D4AF37", fontSize: 13, fontWeight: 600 }}>{b.service.name}</div>
+                      </div>
+                      <span style={{ 
+                        fontSize: 10, 
+                        fontWeight: 900, 
+                        background: b.isMobile ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.05)",
+                        color: b.isMobile ? "#D4AF37" : "rgba(255,255,255,0.6)",
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        letterSpacing: "0.05em",
+                        border: b.isMobile ? "1px solid rgba(212,175,55,0.3)" : "1px solid rgba(255,255,255,0.1)"
+                      }}>
+                        {b.isMobile ? "🚗 MOBILE" : "🏠 STUDIO"}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: 15, marginTop: 12, opacity: 0.8, fontSize: 12 }}>
+                      <span>📅 {new Date(b.startAt).toLocaleDateString()}</span>
+                      <span>⏰ {new Date(b.startAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+
+                    <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                       <div style={{ fontSize: 13, fontWeight: 700 }}>
+                         ${(b.totalCents / 100).toFixed(2)}
+                       </div>
+                       <div style={{ 
+                         fontSize: 11, 
+                         fontWeight: 800, 
+                         color: b.status === "PENDING" ? "#F59E0B" : b.status === "APPROVED" ? "#10B981" : "#6B7280"
+                       }}>
+                         {b.status}
+                       </div>
+                    </div>
+
+                    {b.status === "PENDING" ? (
+                      <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+                        <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/approve`} method="post" style={{ flex: 1 }}>
+                          <button style={goldBtn} type="submit">Approve</button>
+                        </form>
+                        <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/decline`} method="post" style={{ flex:  1 }}>
+                          <button style={outlineBtn} type="submit">Decline</button>
+                        </form>
+                      </div>
+                    ) : null}
+
+                    {b.status === "APPROVED" ? (
+                      <div style={{ marginTop: 15, display: "grid", gap: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>Customer completion link:</div>
+                          <div style={{ marginTop: 6 }}>
+                            <a style={{ color: "#D4AF37", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
+                              /c/{(b as any).customerConfirmToken}
+                            </a>
+                          </div>
+                        </div>
+
+                        <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/done`} method="post">
+                          <button style={btn} type="submit">Mark done (tech)</button>
+                        </form>
+
+                        <a
+                          href={`/tech/${provider.accessToken}/booking/${b.id}/cancel`}
+                          style={{ ...btn, display: "block", textAlign: "center", textDecoration: "none" }}
+                        >
+                          Cancel / no-show
+                        </a>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+                {provider.bookings.length === 0 && (
+                  <div style={{ opacity: 0.6, fontSize: 14, textAlign: "center", padding: "40px 0" }}>
+                    No bookings yet.
+                  </div>
+                )}
+              </div>
+            </section>
+          ),
+          clients: (
+            <ClientListTab token={token} initialClients={clientList} />
+          ),
+          waitlist: (
+            <section style={glassCard}>
+              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 16 }}>Elite Waitlist</div>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ opacity: 0.6, fontSize: 14, textAlign: "center", padding: "40px 0" }}>
+                  Your waitlist is growing. High-demand artists use this to fill cancellations instantly.
+                </div>
+              </div>
+            </section>
+          ),
+          earnings: (
+            <EarningsTab bookings={provider.bookings as any} />
+          ),
+          services: (
+            <section style={glassCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>Services</div>
+                  <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                    Manage your elite lash and nail offerings.
+                  </div>
+                </div>
+                <form action={`/api/provider/${provider.accessToken}/service`} method="post">
+                  <button style={{ ...btn, width: "auto" }} type="submit" name="quick" value="1">
+                    + Quick templates
+                  </button>
+                </form>
+              </div>
 
               <form
-                action={`/api/provider/${provider.accessToken}/service/${s.id}/toggle`}
+                action={`/api/provider/${provider.accessToken}/service`}
                 method="post"
-                style={{ marginTop: 8 }}
+                style={{ display: "grid", gap: 12, marginBottom: 24, padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}
               >
-                <button style={btn} type="submit">
-                  {s.active ? "Deactivate" : "Activate"}
-                </button>
+                <input name="name" required placeholder="Service name" style={input} />
+                <select name="category" required style={input as any} defaultValue="LASHES_BROWS">
+                  <option value="LASHES_BROWS">Lashes/Brows</option>
+                  <option value="NAILS">Nails</option>
+                </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <input name="durationMin" required placeholder="Mins" style={input} inputMode="numeric" />
+                  <input name="price" required placeholder="Price $" style={input} inputMode="decimal" />
+                </div>
+                <textarea name="prepInstructions" placeholder="Service Prep Guide" style={{ ...input, height: 60 }} />
+                <button style={goldBtn} type="submit">Add Service</button>
               </form>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div style={{ fontWeight: 800 }}>Service History</div>
-          <a 
-            href={`/api/provider/${provider.accessToken}/export`} 
-            style={{ ...btn, width: "auto", fontSize: 12, padding: "6px 12px" }}
-            download
-          >
-            📊 Download CSV (Tax Export)
-          </a>
-        </div>
-        <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-          {provider.bookings.map((b) => (
-            <div key={b.id} style={{ ...card, marginTop: 0 }}>
-              <div style={{ fontWeight: 800 }}>
-                {b.customer.fullName} — {b.service.name}
-              </div>
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                {new Date(b.startAt).toLocaleString()} • {b.isMobile ? "Mobile" : "In-studio"}
-              </div>
-              
-              {/* Show Intake Answers */}
-              {b.intakeAnswers.length > 0 && (
-                <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Intake Answers:</div>
-                  {b.intakeAnswers.map(ans => (
-                    <div key={ans.id} style={{ fontSize: 12, marginBottom: 2 }}>
-                      <b>{ans.question.text}:</b> {ans.text}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div style={{ display: "grid", gap: 12 }}>
+                {provider.services.map((s) => (
+                  <div key={s.id} style={itemCard}>
+                    <details>
+                      <summary style={{ cursor: "pointer", listStyle: "none" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ fontWeight: 800 }}>{s.name}</div>
+                          <div style={{ fontSize: 12, opacity: 0.6 }}>Edit ↓</div>
+                        </div>
+                        <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
+                          {s.category} • {s.durationMin} min • ${(s.priceCents / 100).toFixed(2)}
+                        </div>
+                      </summary>
 
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                Status: <b>{b.status}</b>
-              </div>
-              <div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>
-                Total: ${(b.totalCents / 100).toFixed(2)} (deposit hold ${(b.depositCents / 100).toFixed(2)} • platform fee ${(b.platformFeeCents / 100).toFixed(2)} • travel ${(b.travelFeeCents / 100).toFixed(2)})
-              </div>
+                      <form
+                        action={`/api/provider/${provider.accessToken}/service/${s.id}`}
+                        method="post"
+                        style={{ display: "grid", gap: 10, marginTop: 12, padding: "10px 0" }}
+                      >
+                        <input name="name" defaultValue={s.name} style={input} />
+                        <select name="category" defaultValue={s.category} style={input as any}>
+                          <option value="LASHES_BROWS">Lashes/Brows</option>
+                          <option value="NAILS">Nails</option>
+                        </select>
+                        <input name="durationMin" defaultValue={s.durationMin} style={input} inputMode="numeric" />
+                        <input name="price" defaultValue={s.priceCents / 100} style={input} inputMode="decimal" />
+                        <textarea name="prepInstructions" defaultValue={s.prepInstructions || ""} style={{ ...input, height: 60 }} />
+                        <button style={btn} type="submit">Save Changes</button>
+                      </form>
+                      <button 
+                        onClick={async () => {
+                          if (confirm("Delete this service?")) {
+                            await fetch(`/api/provider/${provider.accessToken}/service/${s.id}`, { method: 'DELETE' });
+                            window.location.reload();
+                          }
+                        }}
+                        style={{ ...btn, background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)", color: "#fca5a5", marginTop: 4 }}
+                      >
+                        Delete
+                      </button>
+                    </details>
+                    
+                    <IntakeFormManager token={token} serviceId={s.id} initialQuestions={s.questions} />
 
-              {b.status === "PENDING" ? (
-                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                  <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/approve`} method="post" style={{ flex: 1 }}>
-                    <button style={btn} type="submit">
-                      Approve
-                    </button>
-                  </form>
-                  <ConfirmForm
-                    action={`/api/provider/${provider.accessToken}/booking/${b.id}/decline`}
-                    method="post"
-                    confirmText="Are you sure you want to decline this customer? This will cancel the booking and refund the deposit."
-                    style={{ flex: 1 }}
-                  >
-                    <button
-                      style={{
-                        ...btn,
-                        borderColor: "rgba(248,113,113,0.5)",
-                        background: "rgba(248,113,113,0.12)",
-                      }}
-                      type="submit"
+                    <form
+                      action={`/api/provider/${provider.accessToken}/service/${s.id}/toggle`}
+                      method="post"
+                      style={{ marginTop: 8 }}
                     >
-                      Decline
-                    </button>
-                  </ConfirmForm>
-                </div>
-              ) : null}
-
-              {b.status === "APPROVED" ? (
-                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>Customer completion link:</div>
-                    <div style={{ marginTop: 6 }}>
-                      <a style={{ color: "#D4AF37", fontSize: 13 }} href={`/c/${(b as any).customerConfirmToken}`}>
-                        /c/{(b as any).customerConfirmToken}
-                      </a>
-                    </div>
+                      <button style={{ ...btn, background: s.active ? "rgba(255,255,255,0.05)" : btn.background, borderColor: s.active ? "rgba(255,255,255,0.1)" : btn.borderColor }} type="submit">
+                        {s.active ? "Deactivate" : "Activate"}
+                      </button>
+                    </form>
                   </div>
-
-                  <form action={`/api/provider/${provider.accessToken}/booking/${b.id}/done`} method="post">
-                    <button style={btn} type="submit">Mark done (tech)</button>
-                  </form>
-
-                  <a
-                    href={`/tech/${provider.accessToken}/booking/${b.id}/cancel`}
-                    style={{ ...btn, display: "block", textAlign: "center", textDecoration: "none" }}
-                  >
-                    Cancel / no-show (are you sure?)
-                  </a>
+                ))}
+              </div>
+            </section>
+          ),
+          marketing: (
+            <MarketingTab token={token} />
+          ),
+          settings: (
+            <div style={{ display: "grid", gap: 12 }}>
+              <section style={glassCard}>
+                <div style={{ fontWeight: 800 }}>Smart Marketing</div>
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                  Automated re-booking reminders via SMS.
                 </div>
-              ) : null}
+                <form 
+                  action={`/api/provider/${provider.accessToken}/marketing-toggle`} 
+                  method="post" 
+                  style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}
+                >
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input 
+                      type="checkbox" 
+                      name="rebookingSmsEnabled" 
+                      defaultChecked={provider.rebookingSmsEnabled}
+                      onChange={(e) => e.target.form?.submit()}
+                    />
+                    <span style={{ fontSize: 13 }}>Enable Auto-Reminders</span>
+                  </label>
+                </form>
+              </section>
+
+              <section style={glassCard}>
+                <div style={{ fontWeight: 800 }}>Service Mode</div>
+                <ModeToggle token={token} initialMode={provider.mode} />
+              </section>
+
+              <section style={glassCard}>
+                <div style={{ fontWeight: 800 }}>Mobile Suite Equipment</div>
+                <form action={`/api/provider/${provider.accessToken}/kit`} method="post" style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                  <textarea
+                    name="kitEquipment"
+                    placeholder="List your mobile kit..."
+                    defaultValue={provider.kitEquipmentJson ? JSON.parse(provider.kitEquipmentJson).join("\n") : ""}
+                    style={{ ...input, height: 100 }}
+                  />
+                  <button style={btn} type="submit">Update Kit</button>
+                </form>
+              </section>
+
+              <section style={glassCard}>
+                <div style={{ fontWeight: 800 }}>Custom Travel Zones</div>
+                <TravelZoneManager 
+                  token={token} 
+                  initialZones={provider.travelZonesJson} 
+                  initialSurcharges={provider.travelZoneSurchargesJson} 
+                />
+              </section>
+
+              <section style={glassCard}>
+                <div style={{ fontWeight: 800 }}>Instagram Portfolio</div>
+                <PortfolioManager 
+                  token={token} 
+                  initialHandle={provider.instagram} 
+                  initialPhotos={provider.portfolioUrlsJson} 
+                />
+              </section>
             </div>
-          ))}
-          {provider.bookings.length === 0 ? (
-            <div style={{ opacity: 0.8 }}>No bookings yet.</div>
-          ) : null}
-        </div>
-      </section>
+          )
+        }}
+      </DashboardTabs>
     </main>
   );
 }
 
-const card: React.CSSProperties = {
-  marginTop: 14,
-  padding: 14,
-  borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.10)",
-  background: "rgba(255,255,255,0.04)",
+const mainContainer: React.CSSProperties = {
+  maxWidth: 800,
+  margin: "0 auto",
+  padding: "20px 16px",
+  minHeight: "100vh",
+  background: "linear-gradient(135deg, #0a0a0b 0%, #161618 100%)",
+  color: "#f5f5f7",
 };
 
+const glassCard: React.CSSProperties = {
+  marginTop: 20,
+  padding: 24,
+  borderRadius: 24,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.03)",
+  backdropFilter: "blur(12px)",
+  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+};
+
+const itemCard: React.CSSProperties = {
+  padding: 16,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.05)",
+  background: "rgba(255,255,255,0.02)",
+  transition: "all 0.2s ease",
+};
+
+const goldBtn: React.CSSProperties = {
+  padding: "12px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(212,175,55,0.5)",
+  background: "linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.1) 100%)",
+  color: "#D4AF37",
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: "pointer",
+  width: "100%",
+  letterSpacing: "0.02em",
+};
+
+const outlineBtn: React.CSSProperties = {
+  padding: "12px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.1)",
+  background: "transparent",
+  color: "rgba(255,255,255,0.8)",
+  fontWeight: 600,
+  fontSize: 14,
+  cursor: "pointer",
+  width: "100%",
+};
+
+const card: React.CSSProperties = glassCard;
 const input: React.CSSProperties = {
   width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.06)",
+  padding: "12px 16px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.1)",
+  background: "rgba(255,255,255,0.05)",
   color: "#f5f5f7",
   outline: "none",
+  fontSize: 14,
 };
 
-const btn: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(212,175,55,0.4)",
-  background: "rgba(212,175,55,0.18)",
-  color: "#eef2ff",
-  fontWeight: 800,
-  width: "100%",
-};
+const btn: React.CSSProperties = goldBtn;

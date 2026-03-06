@@ -3,9 +3,8 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Beauty Meet — Book Elite Beauty Artists Across the US",
-  description:
-    "Discover and book top lash, brow, and nail artists across the United States — or join Beauty Meet as a professional and keep more of what you earn.",
+  title: "Beauty Meet — Book Atlanta’s Elite Beauty Artists",
+  description: "Book Atlanta’s top lash, brow, and nail artists. Beauty Meet is the modern marketplace that respects your artistry and your bottom line.",
 };
 
 export default async function RootLayout({

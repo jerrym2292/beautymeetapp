@@ -19,10 +19,13 @@ export async function GET(
       mode: true,
       maxTravelMiles: true,
       travelRateCents: true,
+      portfolioUrlsJson: true,
+      kitEquipmentJson: true,
+      instagram: true,
       services: {
         where: { active: true },
         orderBy: { priceCents: "asc" },
-        select: { id: true, name: true, durationMin: true, priceCents: true, category: true, questions: true },
+        select: { id: true, name: true, durationMin: true, priceCents: true, category: true, prepInstructions: true, questions: true },
       },
     },
   });

@@ -3,18 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { safeMilesBetweenZips } from "@/lib/geo";
 import { getStripe } from "@/lib/stripe";
-
-function makeReferralCode() {
-  // short, readable-ish code
-  return randomUpperHex(4); // 8 chars
-}
-
-function randomUpperHex(bytes: number) {
-  // lazy import for edge/runtime safety
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { randomBytes } = require("crypto") as typeof import("crypto");
-  return randomBytes(bytes).toString("hex").toUpperCase();
-}
+import { calculateTravelSurcharge } from "@/lib/geoUtils";
+import zipcodes from "zipcodes";
 
 export const runtime = "nodejs";
 
@@ -28,15 +18,10 @@ const Body = z.object({
   isMobile: z.boolean().default(false),
   notes: z.string().nullable().optional(),
   affiliateCode: z.string().nullable().optional(),
-  referralCode: z.string().trim().min(4).max(32).nullable().optional(),
-  intakeAnswers: z
-    .array(
-      z.object({
-        questionId: z.string(),
-        text: z.string(),
-      })
-    )
-    .optional(),
+  intakeAnswers: z.array(z.object({
+    questionId: z.string(),
+    text: z.string(),
+  })).optional(),
 });
 
 function parseStartAt(s: string): Date {
@@ -51,295 +36,212 @@ function estimateMilesZip(fromZip: string, toZip: string): number {
   return Math.round(safeMilesBetweenZips(fromZip, toZip));
 }
 
-const DEPOSIT_PCT = 0.25;
-
 export async function POST(req: Request) {
-  try {
-    const json = await req.json().catch(() => null);
-    const parsed = Body.safeParse(json);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid booking request" },
-        { status: 400 }
-      );
-    }
-
-    const {
-      providerId,
-      fullName,
-      phone,
-      customerZip,
-      serviceId,
-      startAt,
-      isMobile,
-      notes,
-      intakeAnswers,
-      affiliateCode,
-      referralCode,
-    } = parsed.data;
-
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
-    if (!provider)
-      return NextResponse.json({ error: "Provider not found" }, { status: 404 });
-
-    const service = await prisma.service.findFirst({
-      where: { id: serviceId, providerId, active: true },
-      include: { questions: true },
-    });
-    if (!service)
-      return NextResponse.json({ error: "Service not found" }, { status: 404 });
-
-    const start = parseStartAt(startAt);
-    if (isNaN(start.getTime()))
-      return NextResponse.json({ error: "Invalid date/time" }, { status: 400 });
-
-    // 1) First-time booking check (for affiliate eligibility)
-    let affiliate: { id: string } | null = null;
-    let isFirstBooking = false;
-
-    const existingCustomer = await prisma.customer.findUnique({ where: { phone } });
-    if (!existingCustomer) {
-      isFirstBooking = true;
-    } else {
-      const previousBooking = await prisma.booking.findFirst({
-        where: { customerId: existingCustomer.id, status: "COMPLETED" },
-      });
-      if (!previousBooking) isFirstBooking = true;
-    }
-
-    if (affiliateCode && isFirstBooking) {
-      affiliate = await prisma.affiliate.findUnique({
-        where: { code: affiliateCode.toUpperCase() },
-        select: { id: true },
-      });
-    }
-
-    // 2) Base pricing (before discounts)
-    const estimatedMiles = isMobile ? estimateMilesZip(provider.baseZip, customerZip) : 0;
-    const travelFeeCents = isMobile ? estimatedMiles * provider.travelRateCents : 0;
-
-    const baseServicePriceCents = service.priceCents;
-    const subtotalCents = baseServicePriceCents + travelFeeCents;
-
-    // 3) Customer record + referrals + consume "next booking" discount (atomic)
-    const referralCodeClean = (referralCode || "").trim().toUpperCase() || null;
-
-    const { customer, discountPctApplied } = await prisma.$transaction(async (tx) => {
-      // Ensure customer exists
-      let c = await tx.customer.findUnique({ where: { phone } });
-
-      if (!c) {
-        // Create with a referral code
-        // (Very low collision risk; unique constraint in DB should enforce.)
-        const code = makeReferralCode();
-        c = await tx.customer.create({
-          data: {
-            fullName,
-            phone,
-            referralCode: code,
-          },
-        });
-      } else {
-        // Keep name fresh; ensure referralCode exists
-        if (!c.referralCode) {
-          const code = makeReferralCode();
-          c = await tx.customer.update({
-            where: { id: c.id },
-            data: { fullName, referralCode: code },
-          });
-        } else {
-          c = await tx.customer.update({ where: { id: c.id }, data: { fullName } });
-        }
-      }
-
-      // Attach referrer on first-ever COMPLETED booking only (per your rule)
-      if (referralCodeClean && isFirstBooking && !c.referredByCustomerId) {
-        const referrer = await tx.customer.findUnique({
-          where: { referralCode: referralCodeClean },
-          select: { id: true },
-        });
-        if (referrer && referrer.id !== c.id) {
-          c = await tx.customer.update({
-            where: { id: c.id },
-            data: { referredByCustomerId: referrer.id },
-          });
-        }
-      }
-
-      // Apply and consume any earned discount
-      const pct = Math.max(0, Math.min(100, c.nextBookingDiscountPct || 0));
-      if (pct > 0) {
-        await tx.customer.update({ where: { id: c.id }, data: { nextBookingDiscountPct: 0 } });
-      }
-
-      return { customer: c, discountPctApplied: pct };
-    });
-
-    // 4) Apply discount to subtotal (service + travel)
-    const discountCents = Math.round(subtotalCents * (discountPctApplied / 100));
-    const discountedSubtotalCents = Math.max(0, subtotalCents - discountCents);
-
-    // Platform fee: 5% always (service + travel), on the amount actually charged
-    const platformFeeCents = Math.round(discountedSubtotalCents * 0.05);
-
-    // Affiliate commission: 10% on first booking (if valid code)
-    const affiliateCommissionCents = affiliate ? Math.round(baseServicePriceCents * 0.1) : 0;
-
-    // Stripe processing fee (customer-visible): 3% on each charge we run.
-    const depositBaseCents = Math.max(1, Math.round(discountedSubtotalCents * DEPOSIT_PCT));
-    const depositStripeFeeCents = Math.round(depositBaseCents * 0.03);
-    const depositTotalCents = depositBaseCents + depositStripeFeeCents;
-
-    const remainingBaseCents = Math.max(0, discountedSubtotalCents - depositBaseCents);
-    const remainingStripeFeeCents = Math.round(remainingBaseCents * 0.03);
-
-    const totalStripeFeeCents = depositStripeFeeCents + remainingStripeFeeCents;
-    const totalCents = discountedSubtotalCents + totalStripeFeeCents;
-
-    const { randomBytes } = await import("crypto");
-    const customerConfirmToken = randomBytes(16).toString("hex");
-    const customerCancelToken = randomBytes(16).toString("hex");
-    const customerIssueToken = randomBytes(16).toString("hex");
-
-    // Create booking first so we can attach multiple payments.
-    const booking = await prisma.booking.create({
-      data: {
-        providerId,
-        customerId: customer.id,
-        serviceId,
-        startAt: start,
-        notes: notes ?? null,
-        isMobile,
-        customerZip,
-        estimatedMiles: isMobile ? estimatedMiles : null,
-        servicePriceCents: baseServicePriceCents,
-        discountPctApplied,
-        discountCents,
-        platformFeeCents,
-        stripeFeeCents: totalStripeFeeCents,
-        depositCents: depositTotalCents,
-        travelFeeCents,
-        totalCents,
-        customerConfirmToken,
-        customerCancelToken,
-        customerIssueToken,
-        affiliateId: affiliate?.id,
-        affiliateCommissionCents,
-        intakeAnswers: intakeAnswers
-          ? {
-              create: intakeAnswers.map((a) => ({
-                questionId: a.questionId,
-                text: a.text,
-              })),
-            }
-          : undefined,
-      },
-      select: { id: true },
-    });
-
-    // Deposit Payment record
-    const depositPayment = await prisma.payment.create({
-      data: {
-        bookingId: booking.id,
-        type: "DEPOSIT",
-        status: "REQUIRES_PAYMENT",
-        amountCents: depositTotalCents,
-        currency: "USD",
-        provider: "stripe",
-      },
-      select: { id: true },
-    });
-
-    const baseUrl = process.env.APP_BASE_URL || new URL(req.url).origin;
-
-    // Allow a demo fallback when Stripe is not configured.
-    if (!process.env.STRIPE_SECRET_KEY) {
-      if (process.env.NODE_ENV !== "production") {
-        return NextResponse.json({
-          ok: true,
-          bookingId: booking.id,
-          checkoutUrl: `${baseUrl}/book/success?bookingId=${booking.id}&demo=1&cancelToken=${customerCancelToken}`,
-        });
-      }
-      return NextResponse.json(
-        { error: "Payments are not configured. Please try again later." },
-        { status: 500 }
-      );
-    }
-
-    const stripe = getStripe();
-
-    // For deposit-only: we are collecting the deposit today, and saving the card for the remainder.
-    const connectPayoutEnabled = !!provider.stripeAccountId;
-
-    // Note: destination charges are only applied for the deposit payment here.
-    // For the remainder charge we will create a new PaymentIntent later.
-    const checkoutParams = {
-      mode: "payment",
-      // We need a Customer object so we can reuse the payment method off-session for the remainder.
-      customer_creation: "always",
-      success_url: `${baseUrl}/book/success?bookingId=${booking.id}&cancelToken=${customerCancelToken}&issueToken=${customerIssueToken}`,
-      cancel_url: `${baseUrl}/book/cancel?bookingId=${booking.id}`,
-      metadata: { bookingId: booking.id, paymentId: depositPayment.id, kind: "deposit" },
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: depositBaseCents,
-            product_data: {
-              name: `${provider.displayName} — ${service.name} (Deposit 25%)`,
-              description: isMobile
-                ? `Deposit for mobile appointment (${estimatedMiles} mi est.)`
-                : `Deposit for in-studio appointment`,
-            },
-          },
-        },
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: depositStripeFeeCents,
-            product_data: {
-              name: `Processing Fee`,
-              description: `3% secure payment processing (deposit)`,
-            },
-          },
-        },
-      ],
-      payment_intent_data: {
-        // capture immediately; this is the deposit
-        metadata: {
-          bookingId: booking.id,
-          providerId: provider.id,
-          connectPayoutEnabled: String(connectPayoutEnabled),
-          kind: "deposit",
-        },
-        // Save payment method for later off-session remainder charge.
-        setup_future_usage: "off_session",
-        ...(connectPayoutEnabled
-          ? {
-              // Deposit: platform takes proportional fee on deposit as well.
-              // NOTE: platform fee model can be adjusted; keeping simple proportional allocation.
-              application_fee_amount: Math.round(
-                (platformFeeCents + affiliateCommissionCents) * DEPOSIT_PCT
-              ),
-              transfer_data: { destination: provider.stripeAccountId! },
-            }
-          : {}),
-      },
-    } as const;
-
-    const session = await stripe.checkout.sessions.create(checkoutParams as any);
-
-    await prisma.payment.update({
-      where: { id: depositPayment.id },
-      data: { paymentIntentId: session.payment_intent as string },
-    });
-
-    return NextResponse.json({ ok: true, bookingId: booking.id, checkoutUrl: session.url });
-  } catch (e: any) {
-    console.error("/api/bookings POST failed", e);
-    return NextResponse.json({ error: e?.message || "Booking failed" }, { status: 500 });
+  const json = await req.json().catch(() => null);
+  const parsed = Body.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid booking request" }, { status: 400 });
   }
+
+  const { providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes, intakeAnswers, affiliateCode } = parsed.data;
+
+  const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+  if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+
+  const service = await prisma.service.findFirst({ 
+    where: { id: serviceId, providerId, active: true },
+    include: { questions: true }
+  });
+  if (!service) return NextResponse.json({ error: "Service not found" }, { status: 404 });
+
+  const prepInstructions = (service as any).prepInstructions;
+
+  const start = parseStartAt(startAt);
+  if (isNaN(start.getTime())) return NextResponse.json({ error: "Invalid date/time" }, { status: 400 });
+
+  // 1. Check for First-Time Status
+  let affiliate = null;
+  let isFirstBooking = false;
+  
+  const existingCustomer = await prisma.customer.findUnique({ where: { phone } });
+  if (!existingCustomer) {
+    isFirstBooking = true;
+  } else {
+    const previousBooking = await prisma.booking.findFirst({ where: { customerId: existingCustomer.id, status: "COMPLETED" } });
+    if (!previousBooking) isFirstBooking = true;
+  }
+
+  // Affiliate code only applies to first-time bookings
+  if (affiliateCode && isFirstBooking) {
+    affiliate = await prisma.affiliate.findUnique({ where: { code: affiliateCode.toUpperCase() } });
+  }
+
+  // 2. Pricing Calculations
+  const estimatedMiles = isMobile ? estimateMilesZip(provider.baseZip, customerZip) : 0;
+  
+  // Custom Travel Zone Surcharge Detection
+  let zoneSurchargeCents = 0;
+  if (isMobile) {
+    const zipData = zipcodes.lookup(customerZip);
+    if (zipData && zipData.latitude && zipData.longitude) {
+      const surcharge = calculateTravelSurcharge(
+        { lat: zipData.latitude, lng: zipData.longitude },
+        provider.travelZonesJson,
+        provider.travelZoneSurchargesJson
+      );
+      zoneSurchargeCents = Math.round(surcharge * 100);
+    }
+  }
+
+  const travelFeeCents = isMobile ? (estimatedMiles * provider.travelRateCents) + zoneSurchargeCents : 0;
+  
+  const baseServicePriceCents = service.priceCents;
+  
+  // Platform Fee Logic:
+  // - First Time: 5% platform + 10% affiliate (if applicable) = 15% (or 5% if no affiliate)
+  // - Repeat: 5% platform
+  let platformFeeCents = Math.round(baseServicePriceCents * 0.05);
+  let affiliateCommissionCents = 0;
+
+  if (isFirstBooking && affiliate) {
+    affiliateCommissionCents = Math.round(baseServicePriceCents * 0.10);
+  }
+
+  // Total Deducted from Provider Payout (Platform 5% + Affiliate 10%)
+  const totalDeductedCents = platformFeeCents + affiliateCommissionCents;
+
+  // Stripe Fee Logic: 3% added on top for customer
+  const stripeFeeCents = Math.round((baseServicePriceCents + travelFeeCents) * 0.03);
+
+  // Grand Total for Customer: Price + Travel + Stripe Fee
+  const totalCents = baseServicePriceCents + travelFeeCents + stripeFeeCents;
+
+  const customer = await prisma.customer.upsert({
+    where: { phone },
+    update: { fullName },
+    create: { fullName, phone },
+  });
+
+  const payment = await prisma.payment.create({
+    data: {
+      status: "REQUIRES_PAYMENT",
+      amountCents: totalCents,
+      currency: "USD",
+      provider: "stripe",
+    },
+    select: { id: true },
+  });
+
+  const { randomBytes } = await import("crypto");
+  const customerConfirmToken = randomBytes(16).toString("hex");
+  const customerCancelToken = randomBytes(16).toString("hex");
+
+  const booking = await prisma.booking.create({
+    data: {
+      providerId,
+      customerId: customer.id,
+      serviceId,
+      startAt: start,
+      notes: notes ?? null,
+      isMobile,
+      customerZip,
+      estimatedMiles: isMobile ? estimatedMiles : null,
+      servicePriceCents: baseServicePriceCents,
+      platformFeeCents,
+      stripeFeeCents,
+      depositCents: Math.round(totalCents * 0.2), // 20% deposit
+      travelFeeCents,
+      totalCents,
+      paymentId: payment.id,
+      customerConfirmToken,
+      customerCancelToken,
+      affiliateId: affiliate?.id,
+      affiliateCommissionCents,
+      intakeAnswers: intakeAnswers ? {
+        create: intakeAnswers.map(a => ({
+          questionId: a.questionId,
+          text: a.text
+        }))
+      } : undefined
+    },
+    select: { id: true },
+  });
+
+  const stripe = getStripe();
+  const baseUrl = process.env.APP_BASE_URL || new URL(req.url).origin;
+
+  // Final Stripe Session
+  // NOTE: `transfer_data.destination` + `application_fee_amount` require Stripe Connect.
+  // In local/dev, providers may not have a connected account yet; in that case we fall back
+  // to a standard Checkout session (no destination transfer) so the rest of the booking flow
+  // can be tested end-to-end.
+  const connectPayoutEnabled = !!provider.stripeAccountId;
+
+  const checkoutParams = {
+    mode: "payment",
+    customer_creation: "if_required",
+    success_url: `${baseUrl}/book/success?bookingId=${booking.id}&cancelToken=${customerCancelToken}`,
+    cancel_url: `${baseUrl}/book/cancel?bookingId=${booking.id}`,
+    metadata: { bookingId: booking.id },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: baseServicePriceCents + travelFeeCents,
+          product_data: {
+            name: `${provider.displayName} — ${service.name}`,
+            description: (isMobile ? `Mobile Appointment (${estimatedMiles} mi)` : `In-Studio`) + (prepInstructions ? ` | ${prepInstructions}` : ""),
+          },
+        },
+      },
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: stripeFeeCents,
+          product_data: {
+            name: `Processing Fee`,
+            description: `3% secure payment processing`,
+          },
+        },
+      }
+    ],
+    payment_intent_data: {
+      capture_method: "manual",
+      metadata: { bookingId: booking.id, providerId: provider.id, connectPayoutEnabled: String(connectPayoutEnabled) },
+      ...(connectPayoutEnabled ? {
+        application_fee_amount: totalDeductedCents, // Platform keeps 5% (+ 10% affiliate on first booking)
+        transfer_data: { destination: provider.stripeAccountId! },
+      } : {}),
+    },
+  } as const;
+
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create(checkoutParams as any);
+  } catch (e: any) {
+    // If the connected account exists but isn't fully onboarded (missing transfers capability),
+    // Stripe will reject `transfer_data.destination`. Fall back to a non-Connect session so
+    // the booking flow can still be exercised.
+    if (connectPayoutEnabled && e?.param === "payment_intent_data[transfer_data][destination]") {
+      const fallbackParams = {
+        ...checkoutParams,
+        payment_intent_data: {
+          capture_method: "manual",
+          metadata: { bookingId: booking.id, providerId: provider.id, connectPayoutEnabled: "false" },
+        },
+      };
+      session = await stripe.checkout.sessions.create(fallbackParams as any);
+    } else {
+      throw e;
+    }
+  }
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { paymentIntentId: session.payment_intent as string },
+  });
+
+  return NextResponse.json({ ok: true, bookingId: booking.id, checkoutUrl: session.url });
 }
