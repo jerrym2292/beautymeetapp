@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const Body = z.object({
   name: z.string().min(2).max(120).optional(),
-  category: z.enum(["LASHES_BROWS", "NAILS"]).optional(),
+  category: z.enum(["LASHES_BROWS", "NAILS", "HAIR", "BRAIDS"]).optional(),
   durationMin: z.coerce.number().int().min(5).max(600).optional(),
   price: z.coerce.number().min(1).max(2000).optional(),
   prepInstructions: z.string().max(2000).optional(), // New: Prep instructions validation
@@ -36,6 +36,10 @@ export async function POST(
       { category: "NAILS" as const, name: "Acrylic Full Set", durationMin: 120, priceCents: 9000, prepInstructions: "Please arrive with bare natural nails." },
       { category: "NAILS" as const, name: "Fill", durationMin: 75, priceCents: 6500, prepInstructions: "No more than 3 weeks since last fill." },
       { category: "NAILS" as const, name: "Pedicure", durationMin: 60, priceCents: 5500, prepInstructions: "Wear open-toed shoes or flip-flops if possible." },
+      { category: "HAIR" as const, name: "Blowout", durationMin: 60, priceCents: 7000, prepInstructions: "Arrive with clean, dry hair if possible." },
+      { category: "HAIR" as const, name: "Silk Press", durationMin: 120, priceCents: 12000, prepInstructions: "Please detangle prior to arrival. Avoid heavy oils." },
+      { category: "BRAIDS" as const, name: "Knotless Braids", durationMin: 240, priceCents: 25000, prepInstructions: "Please arrive with hair washed/blown out if possible. Bring preferred hair or confirm with your tech." },
+      { category: "BRAIDS" as const, name: "Feed-In Braids", durationMin: 180, priceCents: 20000, prepInstructions: "Please arrive with hair detangled. Bring preferred hair or confirm with your tech." },
     ];
     await prisma.service.createMany({
       data: templates.map((t) => ({ ...t, providerId: provider.id })),

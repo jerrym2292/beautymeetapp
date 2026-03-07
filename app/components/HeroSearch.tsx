@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function HeroSearch() {
   const router = useRouter();
   const [zip, setZip] = useState("");
-  const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS">("ALL");
+  const [category, setCategory] = useState<"ALL" | "LASHES_BROWS" | "NAILS" | "HAIR" | "BRAIDS">("ALL");
 
   const zipValid = useMemo(() => zip.trim().length >= 5, [zip]);
 
@@ -30,6 +30,8 @@ export default function HeroSearch() {
           <option value="ALL">All services</option>
           <option value="LASHES_BROWS">Lashes/Brows</option>
           <option value="NAILS">Nails</option>
+          <option value="HAIR">Hair</option>
+          <option value="BRAIDS">Braids</option>
         </select>
       </div>
       <button disabled={!zipValid} style={{ ...btn, opacity: zipValid ? 1 : 0.5 }}>

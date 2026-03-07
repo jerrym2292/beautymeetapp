@@ -6,7 +6,8 @@ import { z } from "zod";
 const Q = z.object({
   zip: z.string().min(5).max(10),
   radius: z.coerce.number().int().min(1).max(500).default(25),
-  category: z.enum(["ALL", "LASHES_BROWS", "NAILS"]).default("ALL"),
+  category: z.enum(["ALL", "LASHES_BROWS", "NAILS", "HAIR", "BRAIDS"]).default("ALL"),
+  serviceName: z.string().min(1).max(120).optional(),
   name: z.string().max(80).optional(),
 });
 
@@ -17,13 +18,14 @@ export async function GET(req: Request) {
     radius: url.searchParams.get("radius") ?? "25",
     category: url.searchParams.get("category") ?? "ALL",
     name: url.searchParams.get("name") || undefined,
+    serviceName: url.searchParams.get("serviceName") || undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid search" }, { status: 400 });
   }
 
-  const { zip, radius, category, name } = parsed.data;
+  const { zip, radius, category, name, serviceName } = parsed.data;
 
   // For MVP: brute force filter in-memory.
   const providers = await prisma.provider.findMany({
@@ -46,6 +48,7 @@ export async function GET(req: Request) {
         where: {
           active: true,
           ...(category === "ALL" ? {} : { category }),
+          ...(serviceName ? { name: serviceName } : {}),
         },
         orderBy: { priceCents: "asc" },
         select: { id: true, name: true, durationMin: true, priceCents: true, category: true },

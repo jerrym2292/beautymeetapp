@@ -253,6 +253,8 @@ export default async function TechDashboard({
                 <select name="category" required style={input as any} defaultValue="LASHES_BROWS">
                   <option value="LASHES_BROWS">Lashes/Brows</option>
                   <option value="NAILS">Nails</option>
+                  <option value="HAIR">Hair</option>
+                  <option value="BRAIDS">Braids</option>
                 </select>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <input name="durationMin" required placeholder="Mins" style={input} inputMode="numeric" />
@@ -285,6 +287,8 @@ export default async function TechDashboard({
                         <select name="category" defaultValue={s.category} style={input as any}>
                           <option value="LASHES_BROWS">Lashes/Brows</option>
                           <option value="NAILS">Nails</option>
+                          <option value="HAIR">Hair</option>
+                          <option value="BRAIDS">Braids</option>
                         </select>
                         <input name="durationMin" defaultValue={s.durationMin} style={input} inputMode="numeric" />
                         <input name="price" defaultValue={s.priceCents / 100} style={input} inputMode="decimal" />

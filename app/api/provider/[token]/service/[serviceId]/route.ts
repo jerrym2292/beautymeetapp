@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const Body = z.object({
   name: z.string().min(2).max(120).optional(),
-  category: z.enum(["LASHES_BROWS", "NAILS"]).optional(),
+  category: z.enum(["LASHES_BROWS", "NAILS", "HAIR", "BRAIDS"]).optional(),
   durationMin: z.coerce.number().int().min(5).max(600).optional(),
   price: z.coerce.number().min(1).max(2000).optional(),
   rebookingWeeks: z.coerce.number().int().min(1).max(52).optional(),

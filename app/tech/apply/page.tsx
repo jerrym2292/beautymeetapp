@@ -12,6 +12,7 @@ export default function TechApplyPage() {
   const [catNails, setCatNails] = useState(false);
   const [catLashes, setCatLashes] = useState(false);
   const [catHair, setCatHair] = useState(false);
+  const [catBraids, setCatBraids] = useState(false);
 
   const [nailsLicenseState, setNailsLicenseState] = useState("");
   const [nailsLicenseNumber, setNailsLicenseNumber] = useState("");
@@ -44,9 +45,9 @@ export default function TechApplyPage() {
     setError(null);
     setVerificationResult(null);
 
-    const appliedCategories: Array<"NAILS" | "LASHES_BROWS" | "HAIR"> = [];
+    const appliedCategories: Array<"NAILS" | "LASHES_BROWS" | "HAIR" | "BRAIDS"> = [];
     const categoryLicenses: Array<{
-      category: "NAILS" | "LASHES_BROWS" | "HAIR";
+      category: "NAILS" | "LASHES_BROWS" | "HAIR" | "BRAIDS";
       licenseState: string;
       licenseNumber: string;
     }> = [];
@@ -71,6 +72,16 @@ export default function TechApplyPage() {
       appliedCategories.push("HAIR");
       categoryLicenses.push({
         category: "HAIR",
+        licenseState: hairLicenseState.toUpperCase(),
+        licenseNumber: hairLicenseNumber,
+      });
+    }
+
+    if (catBraids) {
+      appliedCategories.push("BRAIDS");
+      // For now, braids uses the same hair license fields.
+      categoryLicenses.push({
+        category: "BRAIDS",
         licenseState: hairLicenseState.toUpperCase(),
         licenseNumber: hairLicenseNumber,
       });
@@ -226,6 +237,16 @@ export default function TechApplyPage() {
               <Field label="Hair license number">
                 <input value={hairLicenseNumber} onChange={(e)=>setHairLicenseNumber(e.target.value)} required style={inputStyle} placeholder="123456" />
               </Field>
+            </div>
+          ) : null}
+
+          <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+            <input type="checkbox" checked={catBraids} onChange={(e) => setCatBraids(e.target.checked)} />
+            <span>BRAIDS</span>
+          </label>
+          {catBraids ? (
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+              Uses your Hair license info above.
             </div>
           ) : null}
 

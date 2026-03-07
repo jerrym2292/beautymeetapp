@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyLicense } from "@/lib/licenseVerification";
 
-const Category = z.enum(["NAILS", "LASHES_BROWS", "HAIR"]);
+const Category = z.enum(["NAILS", "LASHES_BROWS", "HAIR", "BRAIDS"]);
 
 const Body = z.object({
   fullName: z.string().min(2).max(120),

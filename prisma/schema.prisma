@@ -322,6 +322,8 @@ model PortfolioImage {
 enum ServiceCategory {
   LASHES_BROWS
   NAILS
+  HAIR
+  BRAIDS
 }
 
 enum ProviderMode {

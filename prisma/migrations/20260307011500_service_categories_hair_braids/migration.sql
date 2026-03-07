@@ -1,0 +1,2 @@
+-- No DB changes needed for SQLite enum expansion (stored as TEXT).
+-- This migration exists to document the addition of HAIR and BRAIDS categories.

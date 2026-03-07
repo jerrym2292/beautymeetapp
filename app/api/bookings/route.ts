@@ -100,7 +100,9 @@ export async function POST(req: Request) {
   // Platform Fee Logic:
   // - First Time: 5% platform + 10% affiliate (if applicable) = 15% (or 5% if no affiliate)
   // - Repeat: 5% platform
-  let platformFeeCents = Math.round(baseServicePriceCents * 0.05);
+  // Switched from 5% to flat $2.50 to stay competitive (GlossGenius/Booksy model)
+  let platformFeeCents = 250; 
+
   let affiliateCommissionCents = 0;
 
   if (isFirstBooking && affiliate) {
