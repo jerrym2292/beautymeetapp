@@ -155,7 +155,7 @@ const dropdownContent: React.CSSProperties = {
   zIndex: 2100,
   boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)",
   padding: "12px 0",
-  marginTop: 10,
+  marginTop: 0,
 };
 
 const dropdownHeader: React.CSSProperties = {
