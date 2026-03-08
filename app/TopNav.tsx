@@ -27,7 +27,7 @@ export default function TopNav({ user }: { user: TopNavUser }) {
         const lastY = lastYRef.current;
 
         // Hide when scrolling down (after a small threshold), show when scrolling up.
-        if (y > lastY && y > 80) setHidden(true);
+        if (y > lastY && y > 20) setHidden(true);
         else setHidden(false);
 
         lastYRef.current = y;
