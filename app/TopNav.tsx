@@ -28,7 +28,7 @@ export default function TopNav({ user }: { user: TopNavUser }) {
           href="/"
           style={{ textDecoration: "none", color: "inherit", fontWeight: 900, fontSize: 22, letterSpacing: "-0.03em" }}
         >
-          BEAUTY <span style={{ color: "#FF69B4" }}>MEET</span>
+          <span style={{ color: "#D4AF37" }}>BEAUTY</span> <span style={{ color: "#FF69B4" }}>MEET</span>
         </Link>
 
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
