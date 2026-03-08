@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 
 export type TopNavUser =
   | null
@@ -11,34 +11,6 @@ export type TopNavUser =
     };
 
 export default function TopNav({ user }: { user: TopNavUser }) {
-  const [hidden, setHidden] = useState(false);
-  const lastYRef = useRef(0);
-  const tickingRef = useRef(false);
-
-  useEffect(() => {
-    lastYRef.current = window.scrollY || 0;
-
-    const onScroll = () => {
-      if (tickingRef.current) return;
-      tickingRef.current = true;
-
-      window.requestAnimationFrame(() => {
-        const y = window.scrollY || 0;
-        const lastY = lastYRef.current;
-
-        // Hide when scrolling down (after a small threshold), show when scrolling up.
-        if (y > lastY && y > 20) setHidden(true);
-        else setHidden(false);
-
-        lastYRef.current = y;
-        tickingRef.current = false;
-      });
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const dashboardHref = user
     ? user.role === "AFFILIATE"
       ? "/affiliate/dashboard"
@@ -50,7 +22,7 @@ export default function TopNav({ user }: { user: TopNavUser }) {
     : null;
 
   return (
-    <div style={{ ...navShell, transform: hidden ? "translateY(-110%)" : "translateY(0)" }}>
+    <div style={navShell}>
       <div style={navInner}>
         <Link
           href="/"
@@ -147,7 +119,6 @@ const navShell: React.CSSProperties = {
   WebkitBackdropFilter: "blur(14px)",
 
   borderBottom: "1px solid rgba(255,255,255,0.08)",
-  transition: "transform 240ms ease",
 };
 
 const navInner: React.CSSProperties = {
