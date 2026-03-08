@@ -111,12 +111,16 @@ export default function BookPage() {
         </div>
 
         <div style={{ marginTop: 20, display: "grid", gap: 12 }}>
-          <select value={category} onChange={(e) => {
-            setCategory(e.target.value as any);
-            setSelectedService(null);
-            setResults([]);
-            setStatus("idle");
-          }} style={input as any}>
+          <select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value as any);
+              setSelectedService(null);
+              setResults([]);
+              setStatus("idle");
+            }}
+            style={selectInput}
+          >
             <option value="ALL">All Categories</option>
             <option value="LASHES_BROWS">Lashes/Brows</option>
             <option value="NAILS">Nails</option>
@@ -176,7 +180,7 @@ export default function BookPage() {
           />
 
           <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-            <select value={String(radius)} onChange={(e) => setRadius(Number(e.target.value) as any)} style={input as any}>
+            <select value={String(radius)} onChange={(e) => setRadius(Number(e.target.value) as any)} style={selectInput}>
               <option value="10">Within 10 miles</option>
               <option value="25">Within 25 miles</option>
               <option value="50">Within 50 miles</option>
@@ -286,6 +290,14 @@ const input: React.CSSProperties = {
   fontSize: 16,
   boxSizing: "border-box"
 };
+
+// Native <select> dropdown option colors vary by OS/browser.
+// This nudges it into a dark theme so options don't render as white-on-white.
+const selectInput = {
+  ...input,
+  background: "#0d0d0f",
+  colorScheme: "dark",
+} as React.CSSProperties & { colorScheme: "dark" };
 
 const btn: React.CSSProperties = {
   padding: "16px 24px",
