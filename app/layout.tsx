@@ -79,10 +79,22 @@ export default async function RootLayout({
 }
 
 const navStyle: React.CSSProperties = {
+  position: "sticky",
+  top: 0,
+  zIndex: 1000,
+
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  paddingBottom: 20,
+
+  // Make the nav feel like it "moves with you" while scrolling
+  background: "rgba(7,7,9,0.85)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+
+  paddingTop: 14,
+  paddingBottom: 14,
+
   borderBottom: "1px solid rgba(255,255,255,0.08)",
   marginBottom: 12
 };
