@@ -8,235 +8,227 @@ export default async function HomePage() {
     <main style={{ paddingBottom: 100 }}>
       {/* Hero Section */}
       <header style={heroSection}>
-        <div style={{ maxWidth: 700 }}>
+        <div style={{ maxWidth: 800 }}>
           <div style={badge}>The Nation's Elite Beauty Collective</div>
-          <h1 style={heroTitle}>Where Artistry Meets <span style={{ color: "#D4AF37" }}>Ownership</span>.</h1>
+          <h1 style={heroTitle}>
+            Where Artistry Meets <span style={{ color: "#D4AF37" }}>Ownership</span>.
+          </h1>
           <p style={heroSub}>
-            The only beauty marketplace that doesn't tax your loyalty. 
-            Book top lash, brow, and nail artists across the US—or join the network that respects your bottom line.
+            Book top-tier <span style={{ color: "#FF69B4" }}>Lash, Hair, Braid, and Nail</span> artists who prioritize quality over volume. 
+            Join the collective that empowers beauty professionals with fair fees and better tools.
           </p>
           <div style={heroActions}>
-            <Link href="/book" style={primaryButton}>Find an Artist</Link>
-            {!user && <Link href="/login" style={secondaryButton}>Partner Login</Link>}
+            <Link href="/book" style={primaryButton}>Book an Appointment</Link>
+            {!user && <Link href="/tech/apply" style={secondaryButton}>Apply as Artist</Link>}
             {user && <Link href={user.role === "AFFILIATE" ? "/affiliate/dashboard" : user.role === "ADMIN" ? "/admin" : user.providerId ? `/tech/${user.providerId}` : "/tech/dashboard"} style={secondaryButton}>My Dashboard</Link>}
           </div>
         </div>
       </header>
 
-      {/* Comparison Section */}
-      <section style={{ marginTop: 80 }}>
-        <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: 40 }}>The Beauty Meet Advantage</h2>
+      {/* Why Beauty Meet? (The Standout Features) */}
+      <section style={{ marginTop: 100 }}>
+        <h2 style={{ fontSize: 36, textAlign: "center", marginBottom: 12, fontWeight: 900 }}>Why Beauty Meet?</h2>
+        <p style={{ textAlign: "center", opacity: 0.7, marginBottom: 50, maxWidth: 600, margin: "0 auto 50px" }}>
+          We aren't just another booking app. We're a community-first platform designed to solve the biggest headaches in the beauty industry.
+        </p>
+        
+        <div style={featureGrid}>
+          <div style={featureCard}>
+            <div style={featureIcon}>✨</div>
+            <h3 style={featureTitle}>Elite Talent Only</h3>
+            <p style={featureText}>We vet every artist. When you book on Beauty Meet, you're booking with a verified professional who takes their craft seriously.</p>
+          </div>
+          <div style={featureCard}>
+            <div style={featureIcon}>💖</div>
+            <h3 style={featureTitle}>Fair to the Pros</h3>
+            <p style={featureText}>Unlike others who take 20-30%, we charge a tiny flat fee. This means your artist keeps more of their hard-earned money.</p>
+          </div>
+          <div style={featureCard}>
+            <div style={featureIcon}>⚡</div>
+            <h3 style={featureTitle}>Seamless Booking</h3>
+            <p style={featureText}>Our new 2-step booking flow is designed for speed. Pick your service, enter your zip, and you're done.</p>
+          </div>
+          <div style={featureCard}>
+            <div style={featureIcon}>📱</div>
+            <h3 style={featureTitle}>Portfolio First</h3>
+            <p style={featureText}>See real work from real clients. We prioritize visual portfolios so you know exactly the style of work you're getting.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison Table */}
+      <section style={{ marginTop: 100, padding: "80px 40px", borderRadius: 32, background: "rgba(255,105,180,0.05)", border: "1px solid rgba(255,105,180,0.2)" }}>
+        <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: 40, fontWeight: 900 }}>The Real Difference</h2>
         <div style={comparisonGrid}>
           <div style={comparisonCard}>
-            <h4 style={compHeader}>Legacy Platforms</h4>
+            <h4 style={compHeader}>The "Big" Apps</h4>
             <p style={compSub}>Vagaro, StyleSeat, Booksy</p>
             <ul style={compList}>
-              <li>❌ 15-30% "New Client" Fees</li>
-              <li>❌ Fees on repeat customers</li>
+              <li>❌ 15-30% "New Client" Tax</li>
+              <li>❌ Fees on every repeat booking</li>
               <li>❌ Bloated, confusing interfaces</li>
-              <li>❌ Review-count gatekeeping</li>
+              <li>❌ Hard to get discovered as a new pro</li>
             </ul>
           </div>
-          <div style={{ ...comparisonCard, border: "2px solid #D4AF37", background: "rgba(212,175,55,0.05)" }}>
+          <div style={{ ...comparisonCard, border: "2px solid #D4AF37", background: "rgba(0,0,0,0.4)" }}>
             <h4 style={{ ...compHeader, color: "#D4AF37" }}>Beauty Meet</h4>
-            <p style={compSub}>The Modern Alternative</p>
+            <p style={compSub}>The Fair Alternative</p>
             <ul style={compList}>
-              <li>✅ 15% One-Time Referral Fee</li>
-              <li>✅ Only 5% on Repeat Clients</li>
-              <li>✅ Flat $19.99/mo Membership</li>
-              <li>✅ Rising Star visibility boost</li>
+              <li>✅ Flat $2.50 Platform Fee</li>
+              <li>✅ Pros keep 100% of their service price</li>
+              <li>✅ Clean, premium, focused UI</li>
+              <li>✅ "Rising Star" algorithm for new talent</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Feature Grid */}
-      <section style={gridSection}>
-        <div style={strengthCard}>
-          <div style={strengthIcon}>📝</div>
-          <h3 style={strengthTitle}>Custom Intake Forms</h3>
-          <p style={strengthText}>Gather essential client info and waivers automatically before they ever step into your chair.</p>
-        </div>
-        <div style={strengthCard}>
-          <div style={strengthIcon}>⭐</div>
-          <h3 style={strengthTitle}>Rising Star Algorithm</h3>
-          <p style={strengthText}>New to the platform? Our algorithm boosts verified talent so you get discovered fast, regardless of review count.</p>
-        </div>
-        <div style={strengthCard}>
-          <div style={strengthIcon}>🚀</div>
-          <h3 style={strengthTitle}>Free Data Import</h3>
-          <p style={strengthText}>Switching from StyleSeat or Vagaro? We'll help you migrate your client list and photos in minutes.</p>
-        </div>
-      </section>
-
-      {/* Savings Calculator Section */}
-      <section style={{ marginTop: 80, padding: 40, borderRadius: 28, background: "#111", border: "1px solid #D4AF37" }}>
-        <h2 style={{ fontSize: 28, marginBottom: 20 }}>See Your Savings</h2>
-        <p style={{ opacity: 0.7, marginBottom: 30 }}>Compare your monthly take-home on Beauty Meet vs. StyleSeat.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 40, alignItems: "center" }}>
-          <div>
-            <label style={{ display: "block", marginBottom: 10, fontSize: 14 }}>Monthly Revenue ($)</label>
-            <input type="number" defaultValue="5000" style={calcInput} />
-          </div>
-          <div style={{ display: "grid", gap: 15 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>StyleSeat (30% New Client Avg)</span>
-              <span style={{ color: "#ff4d4d" }}>-$950</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
-              <span>Beauty Meet (5% Total)</span>
-              <span style={{ color: "#4dff4d" }}>-$250</span>
-            </div>
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.1)", fontSize: 20, fontWeight: 900 }}>
-              Extra Profit: <span style={{ color: "#D4AF37" }}>+$700/mo</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section style={{ marginTop: 80, padding: "60px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <h2 style={{ fontSize: 32, marginBottom: 40, textAlign: "center" }}>Simple for Everyone</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 30 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={stepCircle}>1</div>
-            <h4 style={{ marginTop: 16 }}>Discovery</h4>
-            <p style={{ opacity: 0.6, fontSize: 14 }}>Browse verified artists by their real work, not just stars.</p>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={stepCircle}>2</div>
-            <h4 style={{ marginTop: 16 }}>Seamless Booking</h4>
-            <p style={{ opacity: 0.6, fontSize: 14 }}>Pick a time, fill out the intake form, and pay your deposit.</p>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={stepCircle}>3</div>
-            <h4 style={{ marginTop: 16 }}>The Experience</h4>
-            <p style={{ opacity: 0.6, fontSize: 14 }}>Meet your artist at their studio or your home and enjoy your service.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* User Type CTA Section */}
-      <section style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
+      {/* Final CTAs */}
+      <section style={{ marginTop: 80, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 30 }}>
         <div style={ctaBox}>
-          <h2 style={{ fontSize: 24, marginBottom: 12 }}>Need an Appointment?</h2>
-          <p style={{ opacity: 0.8, marginBottom: 20 }}>Join the thousands of locals booking through Beauty Meet.</p>
-          <Link href="/book" style={ctaButton}>Book Now</Link>
+          <h2 style={{ fontSize: 28, marginBottom: 12, fontWeight: 900 }}>Ready to glow?</h2>
+          <p style={{ opacity: 0.8, marginBottom: 24, fontSize: 17 }}>Browse the best local artists and book your next session in seconds.</p>
+          <Link href="/book" style={{ ...ctaButton, background: "#FF69B4", color: "#fff", border: "none" }}>Find an Artist</Link>
         </div>
 
-        <div style={{ ...ctaBox, border: "1px solid rgba(212,175,55,0.3)", background: "rgba(212,175,55,0.05)" }}>
-          <h2 style={{ fontSize: 24, marginBottom: 12 }}>Ready to Scale?</h2>
-          <p style={{ opacity: 0.8, marginBottom: 20 }}>Stop paying "referral fees" for clients you already know. Join for just $19.99/mo.</p>
-          <Link href="/tech/apply" style={{ ...ctaButton, background: "#D4AF37", color: "#000" }}>Apply as Artist</Link>
+        <div style={{ ...ctaBox, border: "1px solid rgba(212,175,55,0.4)", background: "rgba(212,175,55,0.08)" }}>
+          <h2 style={{ fontSize: 28, marginBottom: 12, fontWeight: 900, color: "#D4AF37" }}>Join the Collective</h2>
+          <p style={{ opacity: 0.8, marginBottom: 24, fontSize: 17 }}>Take control of your business and stop paying the "loyalty tax."</p>
+          <Link href="/tech/apply" style={{ ...ctaButton, background: "#D4AF37", color: "#000", border: "none" }}>Apply as Artist</Link>
         </div>
       </section>
 
-      {/* Affiliate Promo */}
-      <section style={affiliateSection}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: 22 }}>Earn with Beauty Meet</h2>
-          <p style={{ opacity: 0.8 }}>
-            Earn 10% commission on the first booking for every customer you refer. 
-            Plus, get a 10% one-time bonus for every professional you bring to the network.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link href="/login" style={{ ...secondaryButton, padding: "12px 24px", fontSize: 14 }}>Affiliate Login</Link>
-          <Link href="/affiliate/register" style={affiliateLink}>Sign Up to Refer →</Link>
-        </div>
-      </section>
-
-      <footer style={{ marginTop: 80, opacity: 0.4, fontSize: 13, textAlign: "center" }}>
-        © 2026 Beauty Meet. All rights reserved. Built for Elite Artists.
+      <footer style={{ marginTop: 100, opacity: 0.5, fontSize: 14, textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 40 }}>
+        © 2026 Beauty Meet. All rights reserved. <br/>
+        <span style={{ color: "#FF69B4" }}>Pink</span> • <span style={{ color: "#D4AF37" }}>Gold</span> • <span style={{ color: "#fff" }}>Black</span>
       </footer>
     </main>
   );
 }
 
 const heroSection: React.CSSProperties = {
-  padding: "100px 0 80px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  padding: "120px 0 100px",
+  textAlign: "center",
+  margin: "0 auto",
 };
 
 const badge: React.CSSProperties = {
   display: "inline-block",
-  padding: "4px 12px",
-  borderRadius: 20,
-  background: "rgba(212,175,55,0.15)",
-  color: "#D4AF37",
-  fontSize: 12,
-  fontWeight: 700,
+  padding: "6px 16px",
+  borderRadius: 30,
+  background: "rgba(255,105,180,0.15)",
+  color: "#FF69B4",
+  fontSize: 13,
+  fontWeight: 800,
   textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  marginBottom: 16
+  letterSpacing: "0.1em",
+  marginBottom: 20,
+  border: "1px solid rgba(255,105,180,0.3)"
 };
 
 const heroTitle: React.CSSProperties = {
-  fontSize: "clamp(40px, 8vw, 64px)",
+  fontSize: "clamp(42px, 9vw, 72px)",
   fontWeight: 900,
-  lineHeight: 1,
-  letterSpacing: "-0.03em",
-  marginBottom: 24
+  lineHeight: 1.1,
+  letterSpacing: "-0.04em",
+  marginBottom: 28,
 };
 
 const heroSub: React.CSSProperties = {
-  fontSize: 20,
-  opacity: 0.7,
-  lineHeight: 1.5,
-  marginBottom: 32,
-  maxWidth: 600
+  fontSize: 21,
+  opacity: 0.8,
+  lineHeight: 1.6,
+  marginBottom: 40,
+  maxWidth: 700,
+  margin: "0 auto 40px"
 };
 
 const heroActions: React.CSSProperties = {
   display: "flex",
-  gap: 12,
+  gap: 16,
+  justifyContent: "center",
   flexWrap: "wrap"
 };
 
 const primaryButton: React.CSSProperties = {
-  padding: "18px 36px",
-  borderRadius: 14,
-  background: "#F5F2EA",
-  color: "#070709",
-  fontWeight: 800,
+  padding: "20px 40px",
+  borderRadius: 16,
+  background: "#D4AF37",
+  color: "#000",
+  fontWeight: 900,
   textDecoration: "none",
-  fontSize: 17
+  fontSize: 18,
+  transition: "all 0.2s ease"
 };
 
 const secondaryButton: React.CSSProperties = {
-  padding: "18px 36px",
-  borderRadius: 14,
+  padding: "20px 40px",
+  borderRadius: 16,
   background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  color: "#F5F2EA",
-  fontWeight: 700,
+  border: "1px solid rgba(255,255,255,0.15)",
+  color: "#fff",
+  fontWeight: 800,
   textDecoration: "none",
-  fontSize: 17
+  fontSize: 18
+};
+
+const featureGrid: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gap: 24
+};
+
+const featureCard: React.CSSProperties = {
+  padding: 32,
+  borderRadius: 28,
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  textAlign: "center"
+};
+
+const featureIcon: React.CSSProperties = {
+  fontSize: 40,
+  marginBottom: 20
+};
+
+const featureTitle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 900,
+  marginBottom: 12,
+  color: "#FF69B4"
+};
+
+const featureText: React.CSSProperties = {
+  fontSize: 15,
+  opacity: 0.7,
+  lineHeight: 1.6
 };
 
 const comparisonGrid: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 20,
+  gap: 30,
 };
 
 const comparisonCard: React.CSSProperties = {
-  padding: 32,
-  borderRadius: 24,
+  padding: 40,
+  borderRadius: 28,
   background: "rgba(255,255,255,0.02)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  border: "1px solid rgba(255,255,255,0.1)",
 };
 
 const compHeader: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 800,
-  marginBottom: 4
+  fontSize: 22,
+  fontWeight: 900,
+  marginBottom: 6
 };
 
 const compSub: React.CSSProperties = {
   fontSize: 14,
   opacity: 0.5,
-  marginBottom: 20
+  marginBottom: 24,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em"
 };
 
 const compList: React.CSSProperties = {
@@ -244,100 +236,23 @@ const compList: React.CSSProperties = {
   padding: 0,
   margin: 0,
   display: "grid",
-  gap: 12,
-  fontSize: 15
-};
-
-const gridSection: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-  gap: 24,
-  marginTop: 80
-};
-
-const strengthCard: React.CSSProperties = {
-  padding: 32,
-  borderRadius: 24,
-  background: "rgba(255,255,255,0.02)",
-  border: "1px solid rgba(255,255,255,0.05)",
-};
-
-const strengthIcon: React.CSSProperties = {
-  fontSize: 32,
-  marginBottom: 16
-};
-
-const strengthTitle: React.CSSProperties = {
-  fontSize: 19,
-  fontWeight: 800,
-  marginBottom: 12
-};
-
-const strengthText: React.CSSProperties = {
-  fontSize: 15,
-  opacity: 0.6,
-  lineHeight: 1.6
-};
-
-const stepCircle: React.CSSProperties = {
-  width: 48,
-  height: 48,
-  borderRadius: "50%",
-  border: "1px solid #D4AF37",
-  color: "#D4AF37",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 20,
-  fontWeight: 800,
-  margin: "0 auto"
+  gap: 16,
+  fontSize: 16
 };
 
 const ctaBox: React.CSSProperties = {
-  padding: 40,
-  borderRadius: 28,
-  background: "rgba(255,255,255,0.03)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  padding: 50,
+  borderRadius: 32,
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  textAlign: "center"
 };
 
 const ctaButton: React.CSSProperties = {
   display: "inline-block",
-  padding: "14px 28px",
-  borderRadius: 12,
-  background: "rgba(255,255,255,0.1)",
-  color: "#F5F2EA",
-  fontWeight: 700,
-  textDecoration: "none"
-};
-
-const affiliateSection: React.CSSProperties = {
-  marginTop: 80,
-  padding: 40,
-  borderRadius: 28,
-  background: "linear-gradient(90deg, rgba(212,175,55,0.12) 0%, rgba(7,7,9,0) 100%)",
-  border: "1px solid rgba(212,175,55,0.15)",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: 32
-};
-
-const affiliateLink: React.CSSProperties = {
-  color: "#D4AF37",
-  fontWeight: 700,
+  padding: "16px 36px",
+  borderRadius: 14,
+  fontWeight: 900,
   textDecoration: "none",
-  fontSize: 17
-};
-
-const calcInput: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.06)",
-  color: "#f5f5f7",
-  outline: "none",
-  fontSize: 24,
-  fontWeight: 700
+  fontSize: 18
 };

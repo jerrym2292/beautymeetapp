@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Beauty Meet — Book Atlanta’s Elite Beauty Artists",
-  description: "Book Atlanta’s top lash, brow, and nail artists. Beauty Meet is the modern marketplace that respects your artistry and your bottom line.",
+  description: "Book Atlanta’s top lash, brow, hair, and nail artists. Beauty Meet is the modern marketplace that respects your artistry and your bottom line.",
 };
 
 export default async function RootLayout({
@@ -23,13 +23,15 @@ export default async function RootLayout({
           color: "#F5F2EA",
         }}
       >
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", padding: 16 }}>
           <nav style={navStyle}>
-            <Link href="/" style={{ textDecoration: "none", color: "inherit", fontWeight: 800, fontSize: 18 }}>Beauty Meet</Link>
+            <Link href="/" style={{ textDecoration: "none", color: "inherit", fontWeight: 900, fontSize: 22, letterSpacing: "-0.03em" }}>
+              BEAUTY <span style={{ color: "#FF69B4" }}>MEET</span>
+            </Link>
             
             <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
               <div className="dropdown" style={{ position: "relative" }}>
-                <button style={dropdownBtn}>Menu ▾</button>
+                <button style={dropdownBtn}>MENU ▾</button>
                 <div className="dropdown-content" style={dropdownContent}>
                   <Link href="/book" style={dropdownItem}>Book an Artist</Link>
                   <hr style={hrStyle} />
@@ -65,7 +67,8 @@ export default async function RootLayout({
           <style dangerouslySetInnerHTML={{ __html: `
             .dropdown-content { display: none; }
             .dropdown:hover .dropdown-content { display: block; }
-            a:hover { opacity: 1 !important; color: #D4AF37 !important; }
+            a:hover { opacity: 1 !important; color: #FF69B4 !important; }
+            button:hover { border-color: #D4AF37 !important; color: #D4AF37 !important; }
           `}} />
 
           {children}
@@ -79,58 +82,60 @@ const navStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  paddingBottom: 16,
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  paddingBottom: 20,
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
   marginBottom: 12
 };
 
 const dropdownBtn: React.CSSProperties = {
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 10,
+  background: "rgba(0,0,0,0.3)",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 12,
   color: "inherit",
   cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 600,
-  padding: "8px 16px",
-  transition: "all 0.2s"
+  fontSize: 12,
+  fontWeight: 900,
+  padding: "10px 20px",
+  transition: "all 0.2s",
+  letterSpacing: "0.05em"
 };
 
 const dropdownContent: React.CSSProperties = {
   position: "absolute",
   right: 0,
   top: "100%",
-  background: "#121214",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  minWidth: 200,
+  background: "#0d0d0f",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 16,
+  minWidth: 220,
   zIndex: 100,
-  boxShadow: "0 20px 25px -5px rgba(0,0,0,0.5)",
-  padding: "8px 0",
-  marginTop: 8
+  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)",
+  padding: "12px 0",
+  marginTop: 10
 };
 
 const dropdownHeader: React.CSSProperties = {
   padding: "8px 16px 4px",
-  fontSize: 11,
-  opacity: 0.4,
+  fontSize: 10,
+  opacity: 0.5,
   textTransform: "uppercase",
-  fontWeight: 800,
-  letterSpacing: "0.05em"
+  fontWeight: 900,
+  letterSpacing: "0.1em"
 };
 
 const dropdownItem: React.CSSProperties = {
   display: "block",
-  padding: "10px 16px",
+  padding: "12px 16px",
   fontSize: 14,
   textDecoration: "none",
   color: "inherit",
-  opacity: 0.8,
-  transition: "all 0.1s"
+  opacity: 0.9,
+  transition: "all 0.1s",
+  fontWeight: 600
 };
 
 const hrStyle: React.CSSProperties = {
   border: "none",
-  borderTop: "1px solid rgba(255,255,255,0.06)",
-  margin: "6px 0"
+  borderTop: "1px solid rgba(255,255,255,0.08)",
+  margin: "8px 0"
 };
