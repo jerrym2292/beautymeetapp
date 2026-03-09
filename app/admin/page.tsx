@@ -86,6 +86,13 @@ export default async function AdminPage() {
             Refund deposits/remainders by booking.
           </div>
         </Link>
+
+        <Link href="/admin/testing" style={{ ...adminCard, border: "1px solid rgba(212,175,55,0.35)" }}>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Testing Tools</div>
+          <div style={{ opacity: 0.7, fontSize: 14, marginTop: 4 }}>
+            Seed demo data and run smoke tests (staging only).
+          </div>
+        </Link>
       </div>
     </main>
   );
