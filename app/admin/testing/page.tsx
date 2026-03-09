@@ -42,6 +42,13 @@ export default async function AdminTestingPage() {
           actionLabel="Run Smoke Test"
           endpoint="/api/admin/testing/smoke"
         />
+
+        <TestCard
+          title="Wipe & Reset Staging DB"
+          desc="DESTRUCTIVE: Deletes the staging SQLite database and recreates a fresh schema. Admin user will need to be re-created via CLI/bootstrap if deleted."
+          actionLabel="Reset Database"
+          endpoint="/api/admin/testing/reset"
+        />
       </div>
 
       <p style={{ opacity: 0.6, marginTop: 18, fontSize: 13 }}>
