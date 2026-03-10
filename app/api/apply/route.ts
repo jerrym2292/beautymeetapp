@@ -97,35 +97,50 @@ export async function POST(req: Request) {
     categoryLicensesJson = JSON.stringify(licenses);
   }
 
-  const created = await prisma.providerApplication.create({
-    data: {
-      fullName,
-      phone,
-      email: email ?? null,
-      dob: dob ? new Date(dob) : null,
+  let created: { id: string };
+  try {
+    created = await prisma.providerApplication.create({
+      data: {
+        fullName,
+        phone,
+        email: email ?? null,
+        dob: dob ? new Date(dob) : null,
 
-      // legacy fields
-      licenseNumber: licenseNumber ?? null,
-      licenseState: licenseState ?? null,
-      licenseUrl: licenseUrl ?? null,
-      idUrl: idUrl ?? null,
+        // legacy fields
+        licenseNumber: licenseNumber ?? null,
+        licenseState: licenseState ?? null,
+        licenseUrl: licenseUrl ?? null,
+        idUrl: idUrl ?? null,
 
-      // new fields
-      appliedCategoriesJson,
-      categoryLicensesJson,
+        // new fields
+        appliedCategoriesJson,
+        categoryLicensesJson,
 
-      address1: address1 ?? null,
-      address2: address2 ?? null,
-      city: city ?? null,
-      state: state ?? null,
-      zip: zip ?? null,
+        address1: address1 ?? null,
+        address2: address2 ?? null,
+        city: city ?? null,
+        state: state ?? null,
+        zip: zip ?? null,
 
-      verificationStatus: "IN_PROGRESS",
-    },
-    select: { id: true },
-  });
+        verificationStatus: "IN_PROGRESS",
+      },
+      select: { id: true },
+    });
+  } catch (e: any) {
+    // Common production footgun: DB schema not migrated (missing columns like appliedCategoriesJson, etc.)
+    console.error("/api/apply prisma create failed", e);
+    const msg = e?.message || "Failed to save application";
+    const hint = /no such column|column .* does not exist/i.test(msg)
+      ? "Database schema appears out of date. Apply latest Prisma migrations in production (e.g. `prisma migrate deploy`)."
+      : null;
 
-  // Auto-verify (best-effort)
+    return NextResponse.json(
+      { ok: false, error: "Application submission failed.", detail: msg, hint },
+      { status: 500 }
+    );
+  }
+
+  // Auto-verify (best-effort). Never fail the application submission due to verification.
   const licenseList: Array<{ category: string; licenseNumber: string; licenseState: string }> =
     appliedCategoriesJson && categoryLicensesJson
       ? JSON.parse(categoryLicensesJson)
@@ -133,35 +148,52 @@ export async function POST(req: Request) {
         ? [{ category: "LEGACY", licenseNumber, licenseState }]
         : [];
 
-  const results = [] as any[];
-  for (const l of licenseList) {
-    const r = await verifyLicense(l.licenseState, l.licenseNumber, { fullName });
-    results.push({ ...l, ...r });
+  const results: any[] = [];
+  if (licenseList.length) {
+    for (const l of licenseList) {
+      try {
+        const r = await verifyLicense(l.licenseState, l.licenseNumber, { fullName });
+        results.push({ ...l, ...r });
+      } catch (e: any) {
+        console.error("/api/apply verifyLicense failed", e);
+        results.push({
+          ...l,
+          valid: false,
+          error: e?.message || "License verification failed",
+          sourceUrl: null,
+        });
+      }
+    }
   }
 
   const allValid = results.length > 0 && results.every((r) => r.valid);
   const anyLookupAttempted = results.length > 0;
 
-  await prisma.providerApplication.update({
-    where: { id: created.id },
-    data: {
-      verificationStatus: allValid
-        ? "VERIFIED"
-        : anyLookupAttempted
-          ? "NEEDS_MANUAL"
+  try {
+    await prisma.providerApplication.update({
+      where: { id: created.id },
+      data: {
+        verificationStatus: allValid
+          ? "VERIFIED"
+          : anyLookupAttempted
+            ? "NEEDS_MANUAL"
+            : null,
+        verificationDetailsJson: results.length ? JSON.stringify(results) : null,
+        verificationSourceJson: results.length
+          ? JSON.stringify(
+              results.map((r) => ({
+                category: r.category,
+                sourceUrl: r.sourceUrl ?? null,
+              }))
+            )
           : null,
-      verificationDetailsJson: results.length ? JSON.stringify(results) : null,
-      verificationSourceJson: results.length
-        ? JSON.stringify(
-            results.map((r) => ({
-              category: r.category,
-              sourceUrl: r.sourceUrl ?? null,
-            }))
-          )
-        : null,
-      verifiedAt: allValid ? new Date() : null,
-    },
-  });
+        verifiedAt: allValid ? new Date() : null,
+      },
+    });
+  } catch (e: any) {
+    // Don't fail the user-facing flow; just log.
+    console.error("/api/apply prisma update failed", e);
+  }
 
   // TODO: send SMS acknowledgement
 
