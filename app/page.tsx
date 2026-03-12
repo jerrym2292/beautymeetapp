@@ -26,7 +26,7 @@ export default async function HomePage() {
           <p style={heroSub}>
             Beauty Meet is a portfolio-first booking marketplace for <span style={{ color: "#FF69B4" }}>Lashes</span>,{" "}
             <span style={{ color: "#FF69B4" }}>Hair</span>, <span style={{ color: "#FF69B4" }}>Braids</span>, and{" "}
-            <span style={{ color: "#FF69B4" }}>Nails</span>. Customers get a smoother booking experience. Pros keep more of what they earn.
+            <span style={{ color: "#FF69B4" }}>Nails</span> — built for customers and artists across the U.S.
           </p>
 
           <div style={heroActions}>
@@ -89,7 +89,7 @@ export default async function HomePage() {
             <ul style={bulletList}>
               <li><b>Portfolio-first browsing</b> — see real work before you book.</li>
               <li><b>Simple booking flow</b> — pick a service → enter ZIP → choose an artist.</li>
-              <li><b>Deposits</b> that help lock in appointments and reduce cancellations.</li>
+              <li><b>25% deposits</b> to lock in appointments and reduce cancellations.</li>
               <li><b>Custom intake forms</b> for allergies/waivers/preferences before the chair.</li>
               <li><b>Instant confirmations</b> and clear appointment status updates.</li>
             </ul>
@@ -106,11 +106,12 @@ export default async function HomePage() {
               <span style={{ display: "block", color: "#D4AF37" }}>Keep your money. Keep your clients.</span>
             </h2>
             <ul style={bulletList}>
-              <li><b>Fair platform fee</b> — flat fee per booking (no 20–30% cuts).</li>
+              <li><b>Fair platform fee</b> — <b>$2.50</b> per booking (no 20–30% cuts).</li>
               <li><b>Rising Star visibility</b> — new talent can get discovered without “review gatekeeping.”</li>
               <li><b>Service + pricing control</b> — build your menu the way you actually work.</li>
               <li><b>Availability & travel zones</b> — support studio and mobile services.</li>
               <li><b>Stripe payouts</b> — get paid like a real business.</li>
+              <li><b>Pro membership</b> — <b>$14.99/mo</b> (first <b>3 months free</b> for new artists).</li>
             </ul>
             <div style={{ marginTop: 22 }}>
               <Link href="/tech/apply" style={{ ...ctaButton, background: "#D4AF37", color: "#000" }}>
@@ -164,7 +165,7 @@ export default async function HomePage() {
             <h4 style={{ ...compHeader, color: "#D4AF37" }}>Beauty Meet</h4>
             <p style={compSub}>The modern, fair marketplace</p>
             <ul style={compList}>
-              <li>✅ Flat platform fee per booking</li>
+              <li>✅ Flat $2.50 platform fee per booking</li>
               <li>✅ Portfolio-first discovery (real work wins)</li>
               <li>✅ Rising Star boost for new talent</li>
               <li>✅ Clean booking flow optimized for conversion</li>

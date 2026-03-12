@@ -263,7 +263,7 @@ export default function TechApplyPage() {
               onChange={(e) => setAddress1(e.target.value)}
               required
               style={inputStyle}
-              placeholder="123 Peach St"
+              placeholder="123 Main St"
             />
           </Field>
 
@@ -282,7 +282,7 @@ export default function TechApplyPage() {
               onChange={(e) => setCity(e.target.value)}
               required
               style={inputStyle}
-              placeholder="Atlanta"
+              placeholder="Los Angeles"
             />
           </Field>
 
@@ -292,7 +292,7 @@ export default function TechApplyPage() {
               onChange={(e) => setState(e.target.value)}
               required
               style={inputStyle}
-              placeholder="GA"
+              placeholder="CA"
               maxLength={2}
             />
           </Field>
@@ -303,7 +303,7 @@ export default function TechApplyPage() {
               onChange={(e) => setZip(e.target.value)}
               required
               style={inputStyle}
-              placeholder="30303"
+              placeholder="90001"
             />
           </Field>
 

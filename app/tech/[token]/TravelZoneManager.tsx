@@ -11,8 +11,9 @@ const containerStyle = {
 };
 
 const center = {
-  lat: 33.7490, // Default to Atlanta (GA) area based on your previous work
-  lng: -84.3880
+  // Default to Los Angeles, CA (we're starting with California supply)
+  lat: 34.0522,
+  lng: -118.2437
 };
 
 const libraries: ("drawing" | "geometry" | "places")[] = ["drawing", "geometry"];

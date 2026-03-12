@@ -3,8 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import TopNav from "./TopNav";
 
 export const metadata: Metadata = {
-  title: "Beauty Meet — Book Atlanta’s Elite Beauty Artists",
-  description: "Book Atlanta’s top lash, brow, hair, and nail artists. Beauty Meet is the modern marketplace that respects your artistry and your bottom line.",
+  title: "Beauty Meet — Book Elite Beauty Artists Near You",
+  description: "Beauty Meet is a portfolio-first booking marketplace for lashes, hair, braids, and nails — built for customers and artists across the U.S.",
 };
 
 export default async function RootLayout({
