@@ -12,7 +12,14 @@ const Body = z.object({
   providerId: z.string().min(1),
   fullName: z.string().min(2),
   phone: z.string().min(7),
+
+  // Customer location (ZIP required always; full address required for mobile)
+  customerAddress1: z.string().min(2).max(200).nullable().optional(),
+  customerAddress2: z.string().max(200).nullable().optional(),
+  customerCity: z.string().min(2).max(120).nullable().optional(),
+  customerState: z.string().min(2).max(40).nullable().optional(),
   customerZip: z.string().min(5).max(10),
+
   serviceId: z.string().min(1),
   startAt: z.string().min(10),
   isMobile: z.boolean().default(false),
@@ -22,6 +29,16 @@ const Body = z.object({
     questionId: z.string(),
     text: z.string(),
   })).optional(),
+}).superRefine((data, ctx) => {
+  if (data.isMobile) {
+    const a1 = (data.customerAddress1 ?? "").trim();
+    const city = (data.customerCity ?? "").trim();
+    const st = (data.customerState ?? "").trim();
+
+    if (!a1) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["customerAddress1"], message: "Address is required for mobile appointments" });
+    if (!city) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["customerCity"], message: "City is required for mobile appointments" });
+    if (!st) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["customerState"], message: "State is required for mobile appointments" });
+  }
 });
 
 function parseStartAt(s: string): Date {
@@ -43,7 +60,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid booking request" }, { status: 400 });
   }
 
-  const { providerId, fullName, phone, customerZip, serviceId, startAt, isMobile, notes, intakeAnswers, affiliateCode } = parsed.data;
+  const {
+    providerId,
+    fullName,
+    phone,
+    customerAddress1,
+    customerAddress2,
+    customerCity,
+    customerState,
+    customerZip,
+    serviceId,
+    startAt,
+    isMobile,
+    notes,
+    intakeAnswers,
+    affiliateCode,
+  } = parsed.data;
 
   const provider = await prisma.provider.findUnique({ where: { id: providerId } });
   if (!provider) return NextResponse.json({ error: "Provider not found" }, { status: 404 });
@@ -136,6 +168,10 @@ export async function POST(req: Request) {
       startAt: start,
       notes: notes ?? null,
       isMobile,
+      customerAddress1: customerAddress1 ?? null,
+      customerAddress2: customerAddress2 ?? null,
+      customerCity: customerCity ?? null,
+      customerState: customerState ?? null,
       customerZip,
       estimatedMiles: isMobile ? estimatedMiles : null,
       servicePriceCents: baseServicePriceCents,

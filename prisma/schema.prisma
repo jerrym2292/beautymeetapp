@@ -185,7 +185,14 @@ model Booking {
   startAt           DateTime
   notes             String?
   isMobile          Boolean       @default(false)
+
+  // Customer location (required for mobile)
+  customerAddress1  String?
+  customerAddress2  String?
+  customerCity      String?
+  customerState     String?
   customerZip       String
+
   estimatedMiles    Int?
   servicePriceCents Int
 

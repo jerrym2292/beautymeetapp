@@ -51,6 +51,10 @@ export default function ProviderBookingPage({
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [customerAddress1, setCustomerAddress1] = useState("");
+  const [customerAddress2, setCustomerAddress2] = useState("");
+  const [customerCity, setCustomerCity] = useState("");
+  const [customerState, setCustomerState] = useState("");
   const [customerZip, setCustomerZip] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [startAt, setStartAt] = useState("");
@@ -105,16 +109,20 @@ export default function ProviderBookingPage({
     const res = await fetch(`/api/bookings`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ 
-        providerId, 
-        fullName, 
-        phone, 
-        customerZip, 
-        serviceId, 
-        startAt, 
-        isMobile, 
+      body: JSON.stringify({
+        providerId,
+        fullName,
+        phone,
+        customerAddress1: customerAddress1 || null,
+        customerAddress2: customerAddress2 || null,
+        customerCity: customerCity || null,
+        customerState: customerState || null,
+        customerZip,
+        serviceId,
+        startAt,
+        isMobile,
         notes: notes || null,
-        intakeAnswers: Object.entries(intakeAnswers).map(([questionId, text]) => ({ questionId, text }))
+        intakeAnswers: Object.entries(intakeAnswers).map(([questionId, text]) => ({ questionId, text })),
       }),
     });
     const j = await res.json().catch(() => ({}));
@@ -189,9 +197,43 @@ export default function ProviderBookingPage({
               <Field label="Phone">
                 <input value={phone} onChange={(e)=>setPhone(e.target.value)} required style={input} />
               </Field>
-              <Field label="Your ZIP">
-                <input value={customerZip} onChange={(e)=>setCustomerZip(e.target.value)} required style={input} />
-              </Field>
+
+              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <input type="checkbox" checked={isMobile} onChange={(e)=>setIsMobile(e.target.checked)} />
+                <span>Mobile appointment (adds $1/mile travel fee estimate)</span>
+              </label>
+
+              {isMobile ? (
+                <>
+                  <div style={{ padding: 12, background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.22)", borderRadius: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#D4AF37", marginBottom: 6 }}>Mobile Service Address</div>
+                    <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.35 }}>
+                      This is where the professional will travel for your appointment.
+                    </div>
+                  </div>
+                  <Field label="Address line 1">
+                    <input value={customerAddress1} onChange={(e)=>setCustomerAddress1(e.target.value)} required style={input} />
+                  </Field>
+                  <Field label="Address line 2 (optional)">
+                    <input value={customerAddress2} onChange={(e)=>setCustomerAddress2(e.target.value)} style={input} />
+                  </Field>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 10 }}>
+                    <Field label="City">
+                      <input value={customerCity} onChange={(e)=>setCustomerCity(e.target.value)} required style={input} />
+                    </Field>
+                    <Field label="State">
+                      <input value={customerState} onChange={(e)=>setCustomerState(e.target.value)} required style={input} placeholder="NY" />
+                    </Field>
+                  </div>
+                  <Field label="ZIP">
+                    <input value={customerZip} onChange={(e)=>setCustomerZip(e.target.value)} required style={input} />
+                  </Field>
+                </>
+              ) : (
+                <Field label="Your ZIP">
+                  <input value={customerZip} onChange={(e)=>setCustomerZip(e.target.value)} required style={input} />
+                </Field>
+              )}
               <Field label="Service">
                 <select value={serviceId} onChange={(e)=>setServiceId(e.target.value)} style={input as any}>
                   {provider.services.map(s => (
@@ -259,11 +301,6 @@ export default function ProviderBookingPage({
                   </div>
                 </div>
               </Field>
-
-              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <input type="checkbox" checked={isMobile} onChange={(e)=>setIsMobile(e.target.checked)} />
-                <span>Mobile appointment (adds $1/mile travel fee estimate)</span>
-              </label>
 
               <Field label="Notes (optional)">
                 <input value={notes} onChange={(e)=>setNotes(e.target.value)} style={input} />
